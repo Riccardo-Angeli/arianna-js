@@ -7,7 +7,7 @@
  * Flip / mirror buttons with animated CSS transform.
  */
 
-import { Modifier2D, type ModInput } from './_base.ts';
+import { Modifier2D, type ModInput } from './Base.ts';
 
 export interface ReflectorOptions {
     axis?       : 'x' | 'y' | 'both';

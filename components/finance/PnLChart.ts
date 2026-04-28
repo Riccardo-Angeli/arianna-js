@@ -7,7 +7,7 @@
  * Profit & loss bar chart — pure SVG.
  */
 
-import { _svg, _fmtK } from './_helpers.ts';
+import { _svg, _fmtK } from './helpers.ts';
 
 export class PnLChart {
     #el: HTMLElement; #w: number; #h: number;

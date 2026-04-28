@@ -7,7 +7,7 @@
  * 8-direction resize handles on any HTML element.
  */
 
-import { Modifier2D, type ModInput } from './_base.ts';
+import { Modifier2D, type ModInput } from './Base.ts';
 
 export interface ResizerOptions {
     minWidth?   : number;

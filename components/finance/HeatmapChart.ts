@@ -7,7 +7,7 @@
  * Correlation / sector heatmap — pure SVG.
  */
 
-import { _svg, _fmt } from './_helpers.ts';
+import { _svg, _fmt } from './helpers.ts';
 
 export class HeatmapChart {
     #el: HTMLElement; #w: number; #h: number;

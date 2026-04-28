@@ -8,7 +8,7 @@
  */
 
 import type { Bar } from '../../additionals/Finance.ts';
-import { _svg, _fmt } from './_helpers.ts';
+import { _svg, _fmt } from './helpers.ts';
 
 export interface CandlestickChartOptions {
     width?      : number;

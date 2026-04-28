@@ -7,7 +7,7 @@
  * skewX / skewY via drag handle.
  */
 
-import { Modifier2D, type ModInput } from './_base.ts';
+import { Modifier2D, type ModInput } from './Base.ts';
 
 export interface SkewerOptions {
     axis?       : 'x' | 'y' | 'both';

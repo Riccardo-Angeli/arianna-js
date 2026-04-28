@@ -7,7 +7,7 @@
  * Filterable instrument table — pure HTML.
  */
 
-import { _fmt, _fmtK } from './_helpers.ts';
+import { _fmt, _fmtK } from './helpers.ts';
 
 export interface ScreenerRow { symbol: string; price: number; change: number; volume: number; marketCap?: number; [key: string]: unknown; }
 

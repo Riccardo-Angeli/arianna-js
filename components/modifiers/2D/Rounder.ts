@@ -7,7 +7,7 @@
  * Border-radius drag control.
  */
 
-import { Modifier2D, type ModInput } from './_base.ts';
+import { Modifier2D, type ModInput } from './Base.ts';
 
 export interface RounderOptions {
     r?          : number;

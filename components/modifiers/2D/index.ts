@@ -29,8 +29,8 @@ export { Reflector } from './Reflector.ts';
 export type { ReflectorOptions }                  from './Reflector.ts';
 
 // ── Base (for extension) ──────────────────────────────────────────────────────
-export { Modifier2D, _resolveTargets } from './_base.ts';
-export type { ModInput }               from './_base.ts';
+export { Modifier2D, _resolveTargets } from './Base.ts';
+export type { ModInput }               from './Base.ts';
 
 // ── Convenience bundle ────────────────────────────────────────────────────────
 

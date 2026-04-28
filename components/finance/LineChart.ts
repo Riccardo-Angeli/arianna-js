@@ -7,7 +7,7 @@
  * Multi-series line chart — pure SVG, zero dependencies.
  */
 
-import { _svg, _fmt } from './_helpers.ts';
+import { _svg, _fmt } from './helpers.ts';
 
 export interface LineChartSeries { name: string; data: number[]; color?: string; }
 

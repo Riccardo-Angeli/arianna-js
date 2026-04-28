@@ -7,7 +7,7 @@
  * Semi-circular risk gauge — pure SVG.
  */
 
-import { _fmt } from './_helpers.ts';
+import { _fmt } from './helpers.ts';
 
 export class RiskGauge {
     #el: HTMLElement; #size: number;

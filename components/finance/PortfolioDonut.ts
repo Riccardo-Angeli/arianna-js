@@ -7,7 +7,7 @@
  * Asset allocation donut chart — pure SVG.
  */
 
-import { _fmt } from './_helpers.ts';
+import { _fmt } from './helpers.ts';
 
 export class PortfolioDonut {
     #el: HTMLElement; #size: number;

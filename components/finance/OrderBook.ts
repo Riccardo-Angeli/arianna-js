@@ -7,7 +7,7 @@
  * Bid/ask ladder table — pure HTML.
  */
 
-import { _fmt, _fmtK } from './_helpers.ts';
+import { _fmt, _fmtK } from './helpers.ts';
 
 export class OrderBook {
     #el: HTMLElement;
