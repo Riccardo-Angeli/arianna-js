@@ -584,6 +584,152 @@ export class Tube {
 export const Shapes = { Rectangle, Circle, Triangle, Polygon };
 export const Solids = { Sphere, Box, Cylinder, Torus, Cone, Pyramid, Tube };
 
+// ── Plane3D ───────────────────────────────────────────────────────────────────
+
+export class Plane3D {
+    normal   : { x: number; y: number; z: number };
+    constant : number;
+
+    constructor(nx: number, ny: number, nz: number, d: number) {
+        this.normal = { x: nx, y: ny, z: nz };
+        this.constant = d;
+    }
+
+    static fromPoints(a: {x:number;y:number;z:number}, b: {x:number;y:number;z:number}, c: {x:number;y:number;z:number}): Plane3D {
+        const ab = { x: b.x-a.x, y: b.y-a.y, z: b.z-a.z };
+        const ac = { x: c.x-a.x, y: c.y-a.y, z: c.z-a.z };
+        const n  = {
+            x: ab.y*ac.z - ab.z*ac.y,
+            y: ab.z*ac.x - ab.x*ac.z,
+            z: ab.x*ac.y - ab.y*ac.x,
+        };
+        const len = Math.sqrt(n.x**2 + n.y**2 + n.z**2) || 1;
+        n.x /= len; n.y /= len; n.z /= len;
+        const d = -(n.x*a.x + n.y*a.y + n.z*a.z);
+        return new Plane3D(n.x, n.y, n.z, d);
+    }
+
+    distanceToPoint(p: {x:number;y:number;z:number}): number {
+        return this.normal.x*p.x + this.normal.y*p.y + this.normal.z*p.z + this.constant;
+    }
+
+    projectPoint(p: {x:number;y:number;z:number}): {x:number;y:number;z:number} {
+        const d = this.distanceToPoint(p);
+        return { x: p.x - d*this.normal.x, y: p.y - d*this.normal.y, z: p.z - d*this.normal.z };
+    }
+
+    /** Returns parameter t at which a ray hits this plane, or null. */
+    rayIntersect(origin: {x:number;y:number;z:number}, dir: {x:number;y:number;z:number}): number | null {
+        const denom = this.normal.x*dir.x + this.normal.y*dir.y + this.normal.z*dir.z;
+        if (Math.abs(denom) < 1e-6) return null;
+        const t = -(this.normal.x*origin.x + this.normal.y*origin.y + this.normal.z*origin.z + this.constant) / denom;
+        return t >= 0 ? t : null;
+    }
+}
+
+// ── BVH (Bounding Volume Hierarchy) ─────────────────────────────────────────
+
+export interface BVHTriangle {
+    a: { x: number; y: number; z: number };
+    b: { x: number; y: number; z: number };
+    c: { x: number; y: number; z: number };
+    index: number;
+}
+
+interface BVHNode {
+    box  : { min: {x:number;y:number;z:number}; max: {x:number;y:number;z:number} };
+    left?: BVHNode; right?: BVHNode;
+    tris?: BVHTriangle[];
+}
+
+export class BVH {
+    #root: BVHNode | null = null;
+
+    build(triangles: BVHTriangle[], maxLeaf = 4): this {
+        this.#root = this.#buildNode(triangles, 0, maxLeaf);
+        return this;
+    }
+
+    #centroid(t: BVHTriangle): {x:number;y:number;z:number} {
+        return {
+            x: (t.a.x+t.b.x+t.c.x)/3,
+            y: (t.a.y+t.b.y+t.c.y)/3,
+            z: (t.a.z+t.b.z+t.c.z)/3,
+        };
+    }
+
+    #triBox(tris: BVHTriangle[]): BVHNode['box'] {
+        const pts = tris.flatMap(t => [t.a, t.b, t.c]);
+        return {
+            min: { x: Math.min(...pts.map(p=>p.x)), y: Math.min(...pts.map(p=>p.y)), z: Math.min(...pts.map(p=>p.z)) },
+            max: { x: Math.max(...pts.map(p=>p.x)), y: Math.max(...pts.map(p=>p.y)), z: Math.max(...pts.map(p=>p.z)) },
+        };
+    }
+
+    #buildNode(tris: BVHTriangle[], depth: number, maxLeaf: number): BVHNode {
+        const box = this.#triBox(tris);
+        if (tris.length <= maxLeaf || depth > 20) return { box, tris };
+        const axis = ['x','y','z'][[box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z].indexOf(Math.max(box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z))] as 'x'|'y'|'z';
+        const sorted = [...tris].sort((a,b) => this.#centroid(a)[axis] - this.#centroid(b)[axis]);
+        const mid = Math.floor(sorted.length / 2);
+        return {
+            box,
+            left:  this.#buildNode(sorted.slice(0, mid), depth+1, maxLeaf),
+            right: this.#buildNode(sorted.slice(mid),    depth+1, maxLeaf),
+        };
+    }
+
+    /** Ray-cast: returns nearest hit triangle index and t parameter, or null. */
+    raycast(origin: {x:number;y:number;z:number}, dir: {x:number;y:number;z:number}): { index: number; t: number } | null {
+        let best: { index: number; t: number } | null = null;
+        const traverse = (node: BVHNode | undefined) => {
+            if (!node || !this.#rayHitsBox(origin, dir, node.box)) return;
+            if (node.tris) {
+                for (const tri of node.tris) {
+                    const t = this.#rayTriangle(origin, dir, tri);
+                    if (t !== null && (best === null || t < best.t)) best = { index: tri.index, t };
+                }
+            } else { traverse(node.left); traverse(node.right); }
+        };
+        traverse(this.#root ?? undefined);
+        return best;
+    }
+
+    #rayHitsBox(o: {x:number;y:number;z:number}, d: {x:number;y:number;z:number}, box: BVHNode['box']): boolean {
+        let tmin = -Infinity, tmax = Infinity;
+        for (const axis of ['x','y','z'] as const) {
+            if (Math.abs(d[axis]) < 1e-8) {
+                if (o[axis] < box.min[axis] || o[axis] > box.max[axis]) return false;
+            } else {
+                const t1 = (box.min[axis]-o[axis])/d[axis];
+                const t2 = (box.max[axis]-o[axis])/d[axis];
+                tmin = Math.max(tmin, Math.min(t1,t2));
+                tmax = Math.min(tmax, Math.max(t1,t2));
+                if (tmax < tmin) return false;
+            }
+        }
+        return true;
+    }
+
+    #rayTriangle(o: {x:number;y:number;z:number}, d: {x:number;y:number;z:number}, t: BVHTriangle): number | null {
+        // Möller-Trumbore
+        const edge1 = { x: t.b.x-t.a.x, y: t.b.y-t.a.y, z: t.b.z-t.a.z };
+        const edge2 = { x: t.c.x-t.a.x, y: t.c.y-t.a.y, z: t.c.z-t.a.z };
+        const h = { x: d.y*edge2.z-d.z*edge2.y, y: d.z*edge2.x-d.x*edge2.z, z: d.x*edge2.y-d.y*edge2.x };
+        const a = edge1.x*h.x+edge1.y*h.y+edge1.z*h.z;
+        if (Math.abs(a) < 1e-8) return null;
+        const f = 1/a;
+        const s = { x: o.x-t.a.x, y: o.y-t.a.y, z: o.z-t.a.z };
+        const u = f*(s.x*h.x+s.y*h.y+s.z*h.z);
+        if (u < 0 || u > 1) return null;
+        const q = { x: s.y*edge1.z-s.z*edge1.y, y: s.z*edge1.x-s.x*edge1.z, z: s.x*edge1.y-s.y*edge1.x };
+        const v = f*(d.x*q.x+d.y*q.y+d.z*q.z);
+        if (v < 0 || u+v > 1) return null;
+        const r = f*(edge2.x*q.x+edge2.y*q.y+edge2.z*q.z);
+        return r > 1e-8 ? r : null;
+    }
+}
+
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 export const Geometry = {
@@ -592,7 +738,7 @@ export const Geometry = {
   install(_core: typeof Core): void {
     try {
       Object.assign(window, {
-        Angle, Rotation, Size, Point, Matrix, Transform, AABB, Ray,
+        Angle, Rotation, Size, Point, Matrix, Transform, AABB, Ray, Plane3D, BVH,
         Rectangle, Circle, Triangle, Polygon,
         Sphere, Box, Cylinder, Torus, Cone, Pyramid, Tube,
         Shapes, Solids,

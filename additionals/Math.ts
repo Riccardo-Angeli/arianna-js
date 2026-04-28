@@ -554,3 +554,93 @@ export const AriannaMath = {
 /** @deprecated Use AriannaMath */
 export { AriannaMath as Math };
 export default AriannaMath;
+
+// ── Color ─────────────────────────────────────────────────────────────────────
+
+export class Color {
+    r: number; g: number; b: number; a: number;
+
+    constructor(r = 0, g = 0, b = 0, a = 1) { this.r = r; this.g = g; this.b = b; this.a = a; }
+
+    static fromHex(hex: string): Color {
+        const h = hex.replace('#', '');
+        const n = parseInt(h.length === 3 ? h.split('').map(c=>c+c).join('') : h, 16);
+        return new Color((n>>16)&255, (n>>8)&255, n&255, 1);
+    }
+
+    static fromHSL(h: number, s: number, l: number): Color {
+        const a = s * Math.min(l, 1 - l);
+        const f = (n: number) => { const k = (n + h / 30) % 12; return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); };
+        return new Color(Math.round(f(0)*255), Math.round(f(8)*255), Math.round(f(4)*255));
+    }
+
+    toHex(): string { return '#' + [this.r, this.g, this.b].map(v => v.toString(16).padStart(2,'0')).join(''); }
+    toRGB(): string { return `rgb(${this.r},${this.g},${this.b})`; }
+    toRGBA(): string { return `rgba(${this.r},${this.g},${this.b},${this.a})`; }
+    toHSL(): [number, number, number] {
+        const r = this.r/255, g = this.g/255, b = this.b/255;
+        const mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx - mn;
+        const l = (mx + mn) / 2;
+        const s = d === 0 ? 0 : d / (1 - Math.abs(2*l - 1));
+        let h = 0;
+        if (d) h = (mx===r ? (g-b)/d%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4) * 60;
+        return [h < 0 ? h+360 : h, s, l];
+    }
+    lerp(other: Color, t: number): Color {
+        return new Color(
+            Math.round(this.r + (other.r - this.r)*t),
+            Math.round(this.g + (other.g - this.g)*t),
+            Math.round(this.b + (other.b - this.b)*t),
+            this.a + (other.a - this.a)*t
+        );
+    }
+    clone(): Color { return new Color(this.r, this.g, this.b, this.a); }
+    toString(): string { return this.toRGBA(); }
+}
+
+// ── Noise (Perlin + Simplex) ──────────────────────────────────────────────────
+
+const _PERM = (() => {
+    const p = Array.from({length:256},(_,i)=>i);
+    for (let i=255;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [p[i],p[j]]=[p[j],p[i]]; }
+    return [...p,...p];
+})();
+
+const _GRAD3: [number,number,number][] = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
+
+function _fade(t: number): number { return t*t*t*(t*(t*6-15)+10); }
+function _lerp(a: number, b: number, t: number): number { return a + t*(b-a); }
+function _dot3(g: [number,number,number], x: number, y: number, z: number): number { return g[0]*x + g[1]*y + g[2]*z; }
+
+export const Noise = {
+    perlin2(x: number, y: number): number {
+        const X=Math.floor(x)&255, Y=Math.floor(y)&255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        const u=_fade(x), v=_fade(y);
+        const a=_PERM[X]+Y, aa=_PERM[a], ab=_PERM[a+1], b=_PERM[X+1]+Y, ba=_PERM[b], bb=_PERM[b+1];
+        const g=(i:number,dx:number,dy:number)=>_dot3(_GRAD3[_PERM[i]%12],dx,dy,0);
+        return _lerp(_lerp(g(aa,x,y),g(ba,x-1,y),u),_lerp(g(ab,x,y-1),g(bb,x-1,y-1),u),v);
+    },
+
+    perlin3(x: number, y: number, z: number): number {
+        const X=Math.floor(x)&255, Y=Math.floor(y)&255, Z=Math.floor(z)&255;
+        x-=Math.floor(x); y-=Math.floor(y); z-=Math.floor(z);
+        const u=_fade(x),v=_fade(y),w=_fade(z);
+        const A=_PERM[X]+Y,AA=_PERM[A]+Z,AB=_PERM[A+1]+Z,B=_PERM[X+1]+Y,BA=_PERM[B]+Z,BB=_PERM[B+1]+Z;
+        const g=(i:number,dx:number,dy:number,dz:number)=>_dot3(_GRAD3[_PERM[i]%12],dx,dy,dz);
+        return _lerp(
+            _lerp(_lerp(g(AA,x,y,z),g(BA,x-1,y,z),u),_lerp(g(AB,x,y-1,z),g(BB,x-1,y-1,z),u),v),
+            _lerp(_lerp(g(AA+1,x,y,z-1),g(BA+1,x-1,y,z-1),u),_lerp(g(AB+1,x,y-1,z-1),g(BB+1,x-1,y-1,z-1),u),v),
+            w
+        );
+    },
+
+    fbm(x: number, y: number, octaves = 6, lacunarity = 2, gain = 0.5): number {
+        let val = 0, amp = 0.5, freq = 1, max = 0;
+        for (let i = 0; i < octaves; i++) {
+            val += Noise.perlin2(x*freq, y*freq) * amp;
+            max += amp; amp *= gain; freq *= lacunarity;
+        }
+        return val / max;
+    },
+};
