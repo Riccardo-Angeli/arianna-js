@@ -1,0 +1,62 @@
+{
+  "name": "arianna",
+  "version": "1.0.0",
+  "description": "AriannA \u2014 TypeScript UI framework. Zero dependencies. Real DOM + Virtual DOM. Dedicated to Arianna. \u2661",
+  "author": {
+    "name": "Riccardo Angeli",
+    "email": "riccardo.angeli@arianna.dev",
+    "url": "https://arianna.dev"
+  },
+  "license": "AGPL-3.0",
+  "homepage": "https://arianna.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/riccardoangeli/arianna"
+  },
+  "bugs": {
+    "url": "https://github.com/riccardoangeli/arianna/issues"
+  },
+  "keywords": [
+    "ui",
+    "framework",
+    "typescript",
+    "dom",
+    "reactive",
+    "zero-dependencies",
+    "tauri",
+    "webgpu",
+    "observable",
+    "state",
+    "virtual-dom",
+    "real-dom",
+    "directive"
+  ],
+  "main": "AriannA.min.js",
+  "module": "./AriannA.ts",
+  "types": "./AriannA.d.ts",
+  "exports": {
+    ".": {
+      "types": "./AriannA.d.ts",
+      "import": "./AriannA.ts",
+      "require": "./AriannA.min.js"
+    },
+    "./min": "./AriannA.min.js",
+    "./source": "./AriannA.ts"
+  },
+  "files": [
+    "AriannA.ts",
+    "AriannA.min.js",
+    "AriannA.min.js.gz",
+    "AriannA.ts.gz",
+    "AriannA.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

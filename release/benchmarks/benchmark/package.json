@@ -1,0 +1,10 @@
+{
+  "name": "arianna",
+  "type": "module",
+  "scripts": {
+    "start": "vite --port 8080"
+  },
+  "devDependencies": {
+    "vite": "^6"
+  }
+}
