@@ -23,10 +23,16 @@ export { Skewer }    from './Skewer.ts';
 export type { SkewerOptions, SkewerCallback }     from './Skewer.ts';
 
 export { Rounder }   from './Rounder.ts';
-export type { RounderOptions, RounderCallback }   from './Rounder.ts';
+export type { RounderOptions, RounderCallback, Corner } from './Rounder.ts';
 
 export { Reflector } from './Reflector.ts';
 export type { ReflectorOptions }                  from './Reflector.ts';
+
+export { Mover }     from './Mover.ts';
+export type {
+    MoverOptions, MoverCallback, Axis,
+    SnapValue, SnapPoints, MoverBounds, BoundsInput,
+} from './Mover.ts';
 
 // ── Base (for extension) ──────────────────────────────────────────────────────
 export { Modifier2D, _resolveTargets } from './Base.ts';
@@ -39,6 +45,7 @@ import { Rotator }   from './Rotator.ts';
 import { Skewer }    from './Skewer.ts';
 import { Rounder }   from './Rounder.ts';
 import { Reflector } from './Reflector.ts';
+import { Mover }     from './Mover.ts';
 
-export const Modifiers2D = { Resizer, Rotator, Skewer, Rounder, Reflector };
+export const Modifiers2D = { Resizer, Rotator, Skewer, Rounder, Reflector, Mover };
 export default Modifiers2D;
