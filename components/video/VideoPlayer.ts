@@ -21,7 +21,7 @@
  *   v.on('timeupdate', e => updateSubtitles(e.time));
  */
 
-import { AudioComponent, type AudioComponentOptions } from '../core/AudioComponent.ts';
+import { AudioComponent, type AudioComponentOptions } from '../audio/AudioComponent.ts';
 
 export interface VideoPlayerOptions extends AudioComponentOptions {
     src?           : string;

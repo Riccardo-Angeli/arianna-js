@@ -117,26 +117,27 @@ export type { TagOptions }              from './display/Tag.ts';
 export type { TooltipOptions }          from './display/Tooltip.ts';
 
 // Audio
+export { AudioComponent, audioContext, resumeAudio } from './audio/AudioComponent.ts';
 export { PianoRoll }            from './audio/PianoRoll.ts';
 export { AudioPlayer }          from './audio/AudioPlayer.ts';
-export { VideoPlayer }          from './audio/VideoPlayer.ts';
 export { ChannelStrip }         from './audio/ChannelStrip.ts';
 export { AudioTrackEditor }     from './audio/AudioTrackEditor.ts';
-export { VideoTrackEditor }     from './audio/VideoTrackEditor.ts';
 export { AudioEditor }          from './audio/AudioEditor.ts';
 
+export type { AudioComponentOptions } from './audio/AudioComponent.ts';
 export type { PianoRollNote, PianoRollOptions, ExportedSequence as PianoRollExport,
               MidiEvent, Tool as PianoRollTool, RunState as PianoRollRunState } from './audio/PianoRoll.ts';
 export type { AudioPlayerOptions } from './audio/AudioPlayer.ts';
-export type { VideoPlayerOptions } from './audio/VideoPlayer.ts';
 export type { ChannelStripOptions, EQBand, EQBandSettings } from './audio/ChannelStrip.ts';
 export type { AudioTrack, AudioClip, AudioTrackEditorOptions } from './audio/AudioTrackEditor.ts';
-export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject as VideoProjectExport } from './audio/VideoTrackEditor.ts';
 export type { AudioEditorOptions } from './audio/AudioEditor.ts';
 
-// Audio base
-export { AudioComponent, audioContext, resumeAudio } from './core/AudioComponent.ts';
-export type { AudioComponentOptions } from './core/AudioComponent.ts';
+// Video
+export { VideoPlayer }          from './video/VideoPlayer.ts';
+export { VideoTrackEditor }     from './video/VideoTrackEditor.ts';
+
+export type { VideoPlayerOptions } from './video/VideoPlayer.ts';
+export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject as VideoProjectExport } from './video/VideoTrackEditor.ts';
 
 // Composite
 export { NodeEditor }                                    from './composite/NodeEditor.ts';

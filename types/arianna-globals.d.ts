@@ -36,24 +36,29 @@ declare module 'types/arianna' {
 // ── Composite & audio re-exports ─────────────────────────────────────────────
 
 declare module 'arianna/components/audio' {
+    export { AudioComponent }   from './components/audio/AudioComponent.ts';
     export { PianoRoll }        from './components/audio/PianoRoll.ts';
     export { AudioPlayer }      from './components/audio/AudioPlayer.ts';
-    export { VideoPlayer }      from './components/audio/VideoPlayer.ts';
     export { ChannelStrip }     from './components/audio/ChannelStrip.ts';
     export { AudioTrackEditor } from './components/audio/AudioTrackEditor.ts';
-    export { VideoTrackEditor } from './components/audio/VideoTrackEditor.ts';
     export { AudioEditor }      from './components/audio/AudioEditor.ts';
 
+    export type { AudioComponentOptions } from './components/audio/AudioComponent.ts';
     export type {
         PianoRollNote, PianoRollOptions, ExportedSequence,
         MidiEvent, Tool, RunState,
     } from './components/audio/PianoRoll.ts';
     export type { AudioPlayerOptions } from './components/audio/AudioPlayer.ts';
-    export type { VideoPlayerOptions } from './components/audio/VideoPlayer.ts';
     export type { ChannelStripOptions, EQBand, EQBandSettings } from './components/audio/ChannelStrip.ts';
     export type { AudioTrack, AudioClip, AudioTrackEditorOptions } from './components/audio/AudioTrackEditor.ts';
-    export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject } from './components/audio/VideoTrackEditor.ts';
     export type { AudioEditorOptions } from './components/audio/AudioEditor.ts';
+}
+
+declare module 'arianna/components/video' {
+    export { VideoPlayer }      from './components/video/VideoPlayer.ts';
+    export { VideoTrackEditor } from './components/video/VideoTrackEditor.ts';
+    export type { VideoPlayerOptions } from './components/video/VideoPlayer.ts';
+    export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject } from './components/video/VideoTrackEditor.ts';
 }
 
 declare module 'arianna/components/composite' {
@@ -75,24 +80,29 @@ declare module 'ariannajs/components' {
 }
 
 declare module 'ariannajs/components/audio' {
+    export { AudioComponent }   from './components/audio/AudioComponent.ts';
     export { PianoRoll }        from './components/audio/PianoRoll.ts';
     export { AudioPlayer }      from './components/audio/AudioPlayer.ts';
-    export { VideoPlayer }      from './components/audio/VideoPlayer.ts';
     export { ChannelStrip }     from './components/audio/ChannelStrip.ts';
     export { AudioTrackEditor } from './components/audio/AudioTrackEditor.ts';
-    export { VideoTrackEditor } from './components/audio/VideoTrackEditor.ts';
     export { AudioEditor }      from './components/audio/AudioEditor.ts';
 
+    export type { AudioComponentOptions } from './components/audio/AudioComponent.ts';
     export type {
         PianoRollNote, PianoRollOptions, ExportedSequence,
         MidiEvent, Tool, RunState,
     } from './components/audio/PianoRoll.ts';
     export type { AudioPlayerOptions } from './components/audio/AudioPlayer.ts';
-    export type { VideoPlayerOptions } from './components/audio/VideoPlayer.ts';
     export type { ChannelStripOptions, EQBand, EQBandSettings } from './components/audio/ChannelStrip.ts';
     export type { AudioTrack, AudioClip, AudioTrackEditorOptions } from './components/audio/AudioTrackEditor.ts';
-    export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject } from './components/audio/VideoTrackEditor.ts';
     export type { AudioEditorOptions } from './components/audio/AudioEditor.ts';
+}
+
+declare module 'ariannajs/components/video' {
+    export { VideoPlayer }      from './components/video/VideoPlayer.ts';
+    export { VideoTrackEditor } from './components/video/VideoTrackEditor.ts';
+    export type { VideoPlayerOptions } from './components/video/VideoPlayer.ts';
+    export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject } from './components/video/VideoTrackEditor.ts';
 }
 
 declare module 'ariannajs/components/composite' {

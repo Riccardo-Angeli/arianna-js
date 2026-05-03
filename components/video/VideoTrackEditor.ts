@@ -22,7 +22,7 @@
  *   const project = ed.export();   // serializable project JSON
  */
 
-import { AudioComponent, type AudioComponentOptions } from '../core/AudioComponent.ts';
+import { AudioComponent, type AudioComponentOptions } from '../audio/AudioComponent.ts';
 
 export interface VideoTrack {
     id     : string;

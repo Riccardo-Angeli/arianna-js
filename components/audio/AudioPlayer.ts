@@ -23,7 +23,7 @@
  *   p.connect(strip);
  */
 
-import { AudioComponent, type AudioComponentOptions } from '../core/AudioComponent.ts';
+import { AudioComponent, type AudioComponentOptions } from './AudioComponent.ts';
 
 export interface AudioPlayerOptions extends AudioComponentOptions {
     /** Initial source URL. */

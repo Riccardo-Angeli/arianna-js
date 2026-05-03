@@ -22,7 +22,7 @@
  *   strip.on('change', e => console.log(e.gain, e.pan));
  */
 
-import { Control, type CtrlOptions } from './Control.ts';
+import { Control, type CtrlOptions } from '../core/Control.ts';
 
 // ── Shared AudioContext ─────────────────────────────────────────────────────
 // One context per page. Created lazily on first access (autoplay policy).

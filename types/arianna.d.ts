@@ -27,12 +27,12 @@ import type { default as _Namespace } from '../core/Namespace.ts';
 import type { NodeEditor as _NodeEditor } from '../components/composite/NodeEditor.ts';
 import type { PianoRoll  as _PianoRoll  } from '../components/audio/PianoRoll.ts';
 import type { AudioPlayer      as _AudioPlayer      } from '../components/audio/AudioPlayer.ts';
-import type { VideoPlayer      as _VideoPlayer      } from '../components/audio/VideoPlayer.ts';
+import type { VideoPlayer      as _VideoPlayer      } from '../components/video/VideoPlayer.ts';
 import type { ChannelStrip     as _ChannelStrip     } from '../components/audio/ChannelStrip.ts';
 import type { AudioTrackEditor as _AudioTrackEditor } from '../components/audio/AudioTrackEditor.ts';
-import type { VideoTrackEditor as _VideoTrackEditor } from '../components/audio/VideoTrackEditor.ts';
+import type { VideoTrackEditor as _VideoTrackEditor } from '../components/video/VideoTrackEditor.ts';
 import type { AudioEditor      as _AudioEditor      } from '../components/audio/AudioEditor.ts';
-import type { AudioComponent   as _AudioComponent   } from '../components/core/AudioComponent.ts';
+import type { AudioComponent   as _AudioComponent   } from '../components/audio/AudioComponent.ts';
 
 declare global {
 

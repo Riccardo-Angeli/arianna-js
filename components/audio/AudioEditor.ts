@@ -25,7 +25,7 @@
  *   const out = ed.getBuffer();   // post-edit AudioBuffer
  */
 
-import { AudioComponent, type AudioComponentOptions } from '../core/AudioComponent.ts';
+import { AudioComponent, type AudioComponentOptions } from './AudioComponent.ts';
 
 export interface AudioEditorOptions extends AudioComponentOptions {
     /** Initial buffer or URL/File to load. */

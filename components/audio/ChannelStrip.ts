@@ -26,7 +26,7 @@
  *   strip.setEQ('low', { gain: 3, freq: 100 });
  */
 
-import { AudioComponent, type AudioComponentOptions } from '../core/AudioComponent.ts';
+import { AudioComponent, type AudioComponentOptions } from './AudioComponent.ts';
 
 export type EQBand = 'low' | 'mid' | 'high';
 

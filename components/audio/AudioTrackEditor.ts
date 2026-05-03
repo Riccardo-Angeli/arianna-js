@@ -20,7 +20,7 @@
  *   ed.on('change', e => console.log(e));
  */
 
-import { AudioComponent, type AudioComponentOptions } from '../core/AudioComponent.ts';
+import { AudioComponent, type AudioComponentOptions } from './AudioComponent.ts';
 
 export interface AudioTrack {
     id     : string;
