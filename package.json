@@ -1,9 +1,9 @@
 {
   "name": "ariannajs",
-  "version": "1.1.0",
-  "description": "AriannA — Reactive UI framework. Performant like SolidJS, pleasant like React, native as the DOM.",
-  "author": "Riccardo Angeli <riccardo.angeli@arianna.dev> (https://ariannajs.dev)",
-  "license": "SEE LICENSE IN LICENSE",
+  "version": "1.2.0",
+  "description": "AriannA \u2014 Reactive UI framework. Performant like SolidJS, pleasant like React, native as the DOM.",
+  "author": "Riccardo Angeli <riccardo.angeli@arianna.dev> (https://arianna.dev)",
+  "license": "MIT",
   "type": "module",
   "main": "./core/index.ts",
   "module": "./core/index.ts",
@@ -13,48 +13,37 @@
   },
   "exports": {
     ".": {
-      "types": "./core/index.ts",
       "import": "./core/index.ts",
       "default": "./core/index.ts"
     },
     "./core": {
-      "types": "./core/Core.ts",
       "import": "./core/Core.ts"
     },
     "./observable": {
-      "types": "./core/Observable.ts",
       "import": "./core/Observable.ts"
     },
     "./state": {
-      "types": "./core/State.ts",
       "import": "./core/State.ts"
     },
     "./real": {
-      "types": "./core/Real.ts",
       "import": "./core/Real.ts"
     },
     "./virtual": {
-      "types": "./core/Virtual.ts",
       "import": "./core/Virtual.ts"
     },
     "./rule": {
-      "types": "./core/Rule.ts",
       "import": "./core/Rule.ts"
     },
     "./stylesheet": {
-      "types": "./core/Stylesheet.ts",
       "import": "./core/Stylesheet.ts"
     },
     "./directive": {
-      "types": "./core/Directive.ts",
       "import": "./core/Directive.ts"
     },
     "./context": {
-      "types": "./core/Context.ts",
       "import": "./core/Context.ts"
     },
     "./namespace": {
-      "types": "./core/Namespace.ts",
       "import": "./core/Namespace.ts"
     },
     "./jsx-runtime": {
@@ -64,25 +53,31 @@
       "import": "./core/jsx/jsx-dev-runtime.ts"
     },
     "./components": {
-      "types": "./components/index.ts",
       "import": "./components/index.ts"
     },
     "./additionals": {
-      "types": "./additionals/index.ts",
       "import": "./additionals/index.ts"
     },
     "./config": {
-      "types": "./config/arianna.config.ts",
-      "import": "./config/arianna.config.ts"
+      "import": "./arianna-config/arianna.config.ts"
+    },
+    "./components/audio": {
+      "import": "./components/audio/index.ts"
+    },
+    "./components/video": {
+      "import": "./components/video/index.ts"
+    },
+    "./components/composite": {
+      "import": "./components/composite/index.ts"
     }
   },
   "files": [
     "core/",
     "components/",
     "additionals/",
-    "config/",
-    "cli/",
     "types/",
+    "arianna-config/",
+    "cli/",
     "README.md",
     "LICENSE",
     "LICENSES/",
@@ -91,20 +86,15 @@
     "tsconfig.json"
   ],
   "keywords": [
-    "ui",
     "framework",
+    "ui",
     "reactive",
-    "real-dom",
-    "virtual-dom",
-    "signal",
-    "fine-grained",
-    "typescript",
-    "no-vdom",
-    "zero-deps",
     "web-components",
     "custom-elements",
     "dom",
+    "typescript",
     "state-management",
+    "virtual-dom",
     "css-in-js",
     "tauri",
     "wasm",
@@ -116,24 +106,26 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Riccardo-Angeli/AriannA-Js.git"
+    "url": "https://github.com/riccardo-angeli/arianna"
   },
-  "homepage": "https://ariannajs.dev",
+  "homepage": "https://arianna.dev",
   "bugs": {
-    "url": "https://github.com/Riccardo-Angeli/AriannA-Js/issues",
+    "url": "https://github.com/riccardo-angeli/arianna/issues",
     "email": "bugs@arianna.dev"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "docs": "typedoc --out docs core/index.ts",
-    "build": "node scripts/build.mjs",
-    "build:min": "node scripts/build.mjs --minify",
+    "docs": "typedoc --out docs src/index.ts",
+    "prepublish": "npm run typecheck",
     "bench": "node ./release/benchmarks/run.js",
-    "prepublishOnly": "npm run typecheck"
+    "build": "node scripts/build.mjs",
+    "prepare": "husky || true",
+    "build:min": "node scripts/build.mjs --minify"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "typedoc": "^0.25.0"
+    "typedoc": "^0.25.0",
+    "husky": "^9.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -143,9 +135,6 @@
   ],
   "funding": {
     "type": "commercial",
-    "url": "https://ariannajs.dev/licensing"
-  },
-  "publishConfig": {
-    "access": "public"
+    "url": "https://arianna.dev/licensing"
   }
 }

@@ -1,6 +1,6 @@
 console.log('main.ts loaded');
 
-import { Core, Real, State, Directive } from './AriannA.ts';
+import { Core, Real, State, Directive } from 'ariannajs';
 
 // ── App state ─────────────────────────────────────────────────────────────────
 const state = new State({

@@ -2,7 +2,7 @@
  * AriannA App — main.ts
  * Import everything from the single-file bundle
  */
-import { Core, Real, State, Directive } from './AriannA.ts';
+import { Core, Real, State, Directive } from 'ariannajs';
 
 // ── App state ─────────────────────────────────────────────────────────────────
 const state = new State({

@@ -11,5 +11,8 @@
   "devDependencies": {
     "typescript": "^5",
     "vite": "^6"
+  },
+  "dependencies": {
+    "ariannajs": "^1.2.0"
   }
 }
