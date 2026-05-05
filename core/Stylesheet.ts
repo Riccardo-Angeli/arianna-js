@@ -15,7 +15,7 @@
  *   new Sheet(cssString)         — parse CSS text
  *   new Sheet(objectSyntax)      — object literal rule definitions
  *   new Sheet(url: string)       — fetch + parse an existing stylesheet URL
- *                                  (mirrors Golem: SheetES5("http://..."))
+ *                                  (mirrors the legacy library: SheetES5("http://..."))
  *
  * Static API:
  *   Sheet.Sheets      → all Sheet instances
@@ -25,7 +25,7 @@
  *   Sheet.Parse(text) → CSSStyleSheet from text
  *   Sheet.ToArray(t)  → CSSRule[] from text
  *   Sheet.Less(text)  → parse Less/Stylus-style text to CSS string
- *                        (mirrors Golem: SheetES5.Less(text))
+ *                        (mirrors the legacy library: SheetES5.Less(text))
  *
  * Instance API:
  *   // Getters / Setters
@@ -38,10 +38,10 @@
  *   .getIndex(rule | selector)
  *   .contains(rules)
  *   .get(rules)            — also accepts '@keyframes Name' selector
- *   .Get(rules)            — Golem alias for .get()
+ *   .Get(rules)            — the legacy library alias for .get()
  *   .set(rule, value)
- *   .insert(rules, index)  — Golem: sheet.Insert(rule, idx)
- *   .add(rules)            — Golem: sheet.Add(rule1, rule2)
+ *   .insert(rules, index)  — the legacy library: sheet.Insert(rule, idx)
+ *   .add(rules)            — the legacy library: sheet.Add(rule1, rule2)
  *   .unshift(rules)
  *   .remove(rules)
  *   .shift(n)
@@ -55,8 +55,8 @@
  *   sheet.on('Sheet-Changed', e => console.log(e));
  *
  * @example
- *   // Golem SheetES5 pattern — fetch existing stylesheet
- *   const sheet2 = new Sheet('http://localhost:8080/styles/golem');
+ *   // the legacy library SheetES5 pattern — fetch existing stylesheet
+ *   const sheet2 = new Sheet('http://localhost:8080/styles/legacy');
  *   sheet2.on('Sheet-Loaded', () => {
  *     console.log(sheet2.Get('@keyframes spin').Selector);
  *   });
@@ -150,13 +150,13 @@ function _toRules(inputs: unknown[]): Rule[]
     return out;
 }
 
-// ── Sheet.Events — Golem-style named event slots ──────────────────────────────
+// ── Sheet.Events — the legacy library-style named event slots ──────────────────────────────
 
 /**
  * Detail payload shared by all Sheet.Events.* listeners.
  *
- * Mirrors the rich payload from Golem's event system, ensuring the legacy
- * 22-example corpus (and especially Golem-Navigation-Css-Sheet.html) sees
+ * Mirrors the rich payload from the legacy library's event system, ensuring the legacy
+ * 22-example corpus (and especially the legacy library-Navigation-Css-Sheet.html) sees
  * exactly the field names it expects.
  */
 export interface SheetEventDetail
@@ -196,7 +196,7 @@ export interface SheetEventDetail
 export type SheetEventListener = (e: SheetEventDetail) => void;
 
 /**
- * The 6 Golem-style named event slots, all initially null.
+ * The 6 the legacy library-style named event slots, all initially null.
  * Assigning a function to any slot subscribes that listener via Observable.
  *
  * Mapping to the underlying Observable event names:
@@ -473,7 +473,7 @@ export class Sheet
 
     /**
      * Internal: fire a Sheet-level event through the underlying Observable.
-     * Preserves the legacy Golem payload fields (Sheets, Sheet, Link, Path,
+     * Preserves the legacy the legacy library payload fields (Sheets, Sheet, Link, Path,
      * Events, Name, Arguments, Reason, Changing/Changed, AddingRules, ...).
      * Unused fields are still set to sensible defaults so listeners can rely
      * on their presence.
@@ -541,7 +541,7 @@ export class Sheet
 
     /**
      * Parse Less/Stylus-style indented CSS to a standard CSS string.
-     * Mirrors Golem's SheetES5.Less(text).
+     * Mirrors the legacy library's SheetES5.Less(text).
      *
      * Supports: indented nesting, variables (@var: val / $var: val / $var = val),
      * variable substitution, single-line comments (//).
@@ -648,7 +648,7 @@ export class Sheet
     }
 
     /**
-     * Golem-style Events bag: assign listener functions to named slots.
+     * the legacy library-style Events bag: assign listener functions to named slots.
      *
      * @example
      *   sheet.Events.OnSheetChanging = e => console.log('changing', e.Reason);
@@ -720,7 +720,7 @@ export class Sheet
     /**
      * Get one or more rules by selector string, Rule instance, or CSSRule.
      * Also accepts @-rule selectors: sheet.get('@keyframes spin')
-     * Mirrors Golem: sheet.Get('@keyframes Settete')
+     * Mirrors the legacy library: sheet.Get('@keyframes Settete')
      */
     get(...rules: SheetRule[]): Rule | Rule[] | undefined
     {
@@ -738,7 +738,7 @@ export class Sheet
     }
 
     /**
-     * Golem alias for .get() — mirrors sheet.Get('@keyframes Settete').
+     * the legacy library alias for .get() — mirrors sheet.Get('@keyframes Settete').
      */
     Get(...rules: SheetRule[]): Rule | Rule[] | undefined
     {
@@ -790,7 +790,7 @@ export class Sheet
         return this.#bulkInsert(newRules, idx, args, 'insert');
     }
 
-    /** Golem alias: sheet.Insert(rule, idx) */
+    /** the legacy library alias: sheet.Insert(rule, idx) */
     Insert(...args: unknown[]): this
     {
         return this.insert(...args);
@@ -801,7 +801,7 @@ export class Sheet
      *
      * Accepts any combination of: Rule, RuleDefinition object, raw CSS string,
      * native CSSRule, another Sheet (its rules are inlined). A trailing numeric
-     * argument is treated as an insertion index (Golem-compatible).
+     * argument is treated as an insertion index (the legacy library-compatible).
      *
      * Emits, in order:
      *   1. 'rules-add-before' (single event, AddingRules = all incoming rules)
@@ -888,7 +888,7 @@ export class Sheet
         return this;
     }
 
-    /** Golem alias: sheet.Add(rule1, rule2) */
+    /** the legacy library alias: sheet.Add(rule1, rule2) */
     Add(...args: unknown[]): this
     {
         return this.add(...args);
@@ -954,13 +954,13 @@ if (typeof window !== 'undefined')
     });
 
     /**
-     * SheetES5 — Golem legacy factory function.
+     * SheetES5 — the legacy library legacy factory function.
      * Called as: SheetES5()  or  SheetES5("http://...")
      * Also has SheetES5.Less(text) static method.
      *
      * @example
      *   var sheet  = new SheetES5();
-     *   var sheet2 = SheetES5("http://localhost:8080/styles/golem");
+     *   var sheet2 = SheetES5("http://localhost:8080/styles/legacy");
      *   sheet2.Get('@keyframes Settete').Selector;
      *   SheetES5.Less(lessText);
      */

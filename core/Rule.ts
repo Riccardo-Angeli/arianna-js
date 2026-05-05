@@ -14,7 +14,7 @@
  *   new Rule(cssRuleInstance)
  *   new Rule('.selector')                                       // empty
  *
- * ── OBJECT-SELECTOR FORM (Golem structured @-rules) ─────────────────────────
+ * ── OBJECT-SELECTOR FORM (the legacy library structured @-rules) ─────────────────────────
  *   new Rule({ Selector: { Type: '@charset', Value: 'utf-8' } })
  *   new Rule({ Selector: { Type: '@keyframes', Name: 'spin' }, Contents: { From: {...}, To: {...} } })
  *   new Rule({ Selector: { Type: '@media', Media: 'screen', And: { MinHeight: '600px' } }, Rules: { ... } })
@@ -34,11 +34,11 @@
  * ── STATIC METHODS ───────────────────────────────────────────────────────────
  *   Rule.Parse(cssText)               → Rule[]
  *   Rule.From(cssRule)                → Rule
- *   Rule.GetSelector(def)             → string   (Golem Css.GetSelector)
- *   Rule.GetType(def)                 → string   (Golem Css.GetType)
- *   Rule.GetContents(def)             → object   (Golem Css.GetContents)
- *   Rule.GetText(def)                 → string   (Golem Css.GetText)
- *   Rule.GetObject(cssText)           → object   (Golem Css.GetObject)
+ *   Rule.GetSelector(def)             → string   (the legacy library Css.GetSelector)
+ *   Rule.GetType(def)                 → string   (the legacy library Css.GetType)
+ *   Rule.GetContents(def)             → object   (the legacy library Css.GetContents)
+ *   Rule.GetText(def)                 → string   (the legacy library Css.GetText)
+ *   Rule.GetObject(cssText)           → object   (the legacy library Css.GetObject)
  *
  * ── CSS.STATE ────────────────────────────────────────────────────────────────
  *   new CssState(el, 'MouseDown', existingCss, { background: 'yellow' }, action?, '@Keyframes Name', frames?)
@@ -53,7 +53,7 @@ export type CSSProperties = Record<string, string>;
 
 /**
  * Object-literal rule definition accepted by the constructor.
- * Supports legacy Golem field aliases: Contents / Content / Body / Rule.
+ * Supports legacy the legacy library field aliases: Contents / Content / Body / Rule.
  * Property keys may be PascalCase (Width) or camelCase (width).
  */
 export interface RuleDefinition
@@ -67,7 +67,7 @@ export interface RuleDefinition
 }
 
 /**
- * Structured object selector used in Golem Css examples.
+ * Structured object selector used in the legacy library Css examples.
  * Type is the @-rule keyword; other keys are rule-specific.
  */
 export interface SelectorObject
@@ -602,11 +602,11 @@ export class Rule
 
     static From(cssRule: CSSRule): Rule { return new Rule(cssRule); }
 
-    // ── Golem static API ──────────────────────────────────────────────────────
+    // ── the legacy library static API ──────────────────────────────────────────────────────
 
     /**
      * Return the selector string from a RuleDefinition.
-     * Mirrors Golem's Css.GetSelector().
+     * Mirrors the legacy library's Css.GetSelector().
      *
      * @example
      *   Rule.GetSelector({ Selector: { Type: '@media', Media: 'screen' } })
@@ -622,7 +622,7 @@ export class Rule
 
     /**
      * Return the @-rule type keyword from a RuleDefinition.
-     * Mirrors Golem's Css.GetType().
+     * Mirrors the legacy library's Css.GetType().
      *
      * @example
      *   Rule.GetType({ Selector: { Type: '@keyframes', Name: 'spin' } })
@@ -642,7 +642,7 @@ export class Rule
 
     /**
      * Return the contents/properties object from a RuleDefinition.
-     * Mirrors Golem's Css.GetContents().
+     * Mirrors the legacy library's Css.GetContents().
      */
     static GetContents(def: RuleDefinition): Record<string, unknown>
     {
@@ -653,7 +653,7 @@ export class Rule
 
     /**
      * Serialize a RuleDefinition to its CSS text string.
-     * Mirrors Golem's Css.GetText().
+     * Mirrors the legacy library's Css.GetText().
      */
     static GetText(def: RuleDefinition): string
     {
@@ -662,7 +662,7 @@ export class Rule
 
     /**
      * Parse a CSS text string into a structured JS object.
-     * Mirrors Golem's Css.GetObject().
+     * Mirrors the legacy library's Css.GetObject().
      *
      * Returns an object keyed by selector with contents as nested objects.
      *
@@ -785,7 +785,7 @@ export class Rule
 
 /**
  * Binds a DOM element to a CSS state triggered by a DOM event.
- * Mirrors Golem's Css.State constructor.
+ * Mirrors the legacy library's Css.State constructor.
  *
  * @example
  *   const state = new CssState(
@@ -836,7 +836,7 @@ export class CssState
             document.head.appendChild(style);
         }
 
-        // Map Golem-style event names to DOM event names
+        // Map the legacy library-style event names to DOM event names
         const domEvent = this.#mapEvent(eventName);
         element.addEventListener(domEvent, (e) =>
         {
@@ -875,11 +875,11 @@ export class CssState
  * 1. As constructor:    `new Css(rule)`     →  Rule
  * 2. As function:       `Css(rule)`         →  Rule
  *
- * The function carries all the legacy static helpers from Golem
+ * The function carries all the legacy static helpers from the legacy library
  * (`Css.GetSelector`, `Css.GetType`, `Css.GetContents`, `Css.GetText`,
  * `Css.GetObject`, `Css.State`, `Css.Bind`).
  *
- * Use it for back-compat with the Golem 12-year corpus:
+ * Use it for back-compat with the the legacy library 12-year corpus:
  *   var boxCss = new Css(boxRule);                        // rule object form
  *   var boxCss = new Css(".my-class", { color: "red" });  // (selector, props)
  *   var sel    = Css.GetSelector(rule);                   // static helpers
@@ -907,9 +907,9 @@ export interface CssFactory
     /**
      * Multi-element stylistic binding.
      *
-     * **Status: PLACEHOLDER — not yet ported from legacy Golem.**
+     * **Status: PLACEHOLDER — not yet ported from legacy the legacy library.**
      *
-     * The legacy signature observed in Golem-Css-Bind.html:
+     * The legacy signature observed in the legacy library-Css-Bind.html:
      *   Css.Bind(elementA, [groupA], elementB, elementC, [groupB], depth);
      *
      * Intended behaviour appears to propagate style changes between linked
@@ -924,7 +924,7 @@ export interface CssFactory
  * `Css` — single entry point that is both constructor (with `new`)
  * and plain function (without `new`), and hosts all legacy static helpers.
  *
- * All the 22 Golem-Css-*.html examples exercise this entry point.
+ * All the 22 the legacy library-Css-*.html examples exercise this entry point.
  *
  * @example
  *   const r = new Css({ Selector: ".btn", Contents: { color: "red" } });
@@ -946,7 +946,7 @@ function _CssCallable(this: unknown, ...args: unknown[]): Rule
 
 const Css = _CssCallable as unknown as CssFactory;
 
-// Attach static helpers (mirrors Golem's namespace shape)
+// Attach static helpers (mirrors the legacy library's namespace shape)
 Css.GetSelector = (def: RuleDefinition) => Rule.GetSelector(def);
 Css.GetType     = (def: RuleDefinition) => Rule.GetType(def);
 Css.GetContents = (def: RuleDefinition) => Rule.GetContents(def);
@@ -957,8 +957,8 @@ Css.Bind        = (..._args: unknown[]) =>
 {
     if (typeof console !== 'undefined')
         console.warn(
-            'Css.Bind: not yet ported from legacy Golem implementation. ' +
-            'See Golem-Css-Bind.html for reference. Tracked as roadmap item.'
+            'Css.Bind: not yet ported from legacy the legacy library implementation. ' +
+            'See the legacy library-Css-Bind.html for reference. Tracked as roadmap item.'
         );
 };
 

@@ -5,9 +5,9 @@
  * @copyright Riccardo Angeli 2012-2024 All Rights Reserved
  * @license   AGPL-3.0 / Commercial
  *
- * Migrated and extended from Golem.Geometry (2012-2018).
+ * Migrated and extended from AriannA Geometry (2012-2018).
  *
- * ── Original Golem classes preserved ──────────────────────────────────────────
+ * ── Original the legacy library classes preserved ──────────────────────────────────────────
  *
  *   Angle     — full unit system: Radians, Degrees, Turns, Quadrants,
  *               Grads, Mils, Sextants, Points, BinaryDegrees, Hours,
@@ -36,7 +36,7 @@
  *   import { Geometry, Angle, Matrix, Shapes, AABB, Ray } from "./Geometry.ts";
  *   Core.use(Geometry);
  *
- *   // Original Golem API preserved
+ *   // Original the legacy library API preserved
  *   const a = new Angle(Math.PI / 4, "Radians");
  *   console.log(a.Degrees);   // → 45
  *   console.log(a.Sine);      // → 0.7071...
@@ -50,11 +50,11 @@
  *   console.log(ray.intersectAABB(box)); // → { hit: true, t: 4 }
  */
 
-import { Core } from "../core/index.ts";
+import { Core } from "../core";
 import { Vector2, Vector3, Matrix4, Quaternion } from "./Math.ts";
 
 // ── Angle ─────────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Angle — all units and trig values preserved
+// Original Geometry.Angle — all units and trig values preserved
 
 export class Angle {
   private _radians: number;
@@ -63,7 +63,7 @@ export class Angle {
     this._radians = Angle._toRadians(value, unit);
   }
 
-  // Unit conversions — all original Golem units
+  // Unit conversions — all original the legacy library units
   get Radians      (): number { return this._radians; }
   get Degrees      (): number { return this._radians * 180 / Math.PI; }
   get Turns        (): number { return this._radians / (2 * Math.PI); }
@@ -77,7 +77,7 @@ export class Angle {
   get Minutes      (): number { return this.Hours * 60; }
   get Seconds      (): number { return this.Hours * 3600; }
 
-  // Trig values — original Golem
+  // Trig values — original the legacy library
   get Sine     (): number { return Math.sin(this._radians); }
   get Cosine   (): number { return Math.cos(this._radians); }
   get Tangent  (): number { return Math.tan(this._radians); }
@@ -128,7 +128,7 @@ export type AngleUnit =
     | "Hours" | "Minutes" | "Seconds";
 
 // ── Rotation ──────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Rotation — Euler angles (Psi/Theta/Phi)
+// Original Geometry.Rotation — Euler angles (Psi/Theta/Phi)
 
 export class Rotation {
   private _psi  : Angle;
@@ -157,7 +157,7 @@ export class Rotation {
 }
 
 // ── Size ──────────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Size
+// Original Geometry.Size
 
 export class Size {
   constructor(
@@ -173,7 +173,7 @@ export class Size {
 }
 
 // ── Point ─────────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Point
+// Original Geometry.Point
 
 export class Point {
   constructor(public X=0, public Y=0, public Z=0) {}
@@ -185,7 +185,7 @@ export class Point {
 }
 
 // ── Matrix (NxN) ──────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Matrix — full implementation
+// Original Geometry.Matrix — full implementation
 // 25 methods: Is, Diagonal, Trace, Clone, Sum, Subtract, Multiply, Divide,
 // Transpose, Inverse, Determinant, Invertible, Singular, GetMinor,
 // LUP, Lower, Upper, Permutation, QR, Q, R, H, RREF, EigenValues, EigenVectors
@@ -213,7 +213,7 @@ export class Matrix {
   row(r:number): number[] { return [...this._data[r]]; }
   col(c:number): number[] { return this._data.map(r=>r[c]); }
 
-  // Original Golem methods
+  // Original the legacy library methods
   Diagonal (): number[]  { return Array.from({length:Math.min(this.rows,this.cols)},(_,i)=>this._data[i][i]); }
   Trace    (): number    { return this.Diagonal().reduce((a,b)=>a+b,0); }
   Clone    (): Matrix    { return new Matrix(this._data); }
@@ -252,7 +252,7 @@ export class Matrix {
     return new Matrix(adj).Divide(det);
   }
 
-  // LUP decomposition (original Golem)
+  // LUP decomposition (original the legacy library)
   LUP(): { L: Matrix; U: Matrix; P: Matrix } {
     const n=this.rows;
     const L=Matrix.identity(n),U=this.Clone(),P=Matrix.identity(n);
@@ -273,7 +273,7 @@ export class Matrix {
   Upper(): Matrix { return this.LUP().U; }
   Permutation(): Matrix { return this.LUP().P; }
 
-  // QR decomposition (original Golem)
+  // QR decomposition (original the legacy library)
   QR(): { Q: Matrix; R: Matrix } {
     const n=this.rows,m=this.cols;
     const Q=Matrix.zeros(n,m),R=Matrix.zeros(m,m);
@@ -323,23 +323,49 @@ export class Matrix {
     return A.Diagonal();
   }
 
+  /**
+   * Compute approximate eigenvectors using inverse power iteration with shifts.
+   *
+   * For each eigenvalue λ from {@link EigenValues}, solve `(A - λI) v = 0`
+   * by repeatedly applying `(A - λI)⁻¹` to a random starting vector. The
+   * largest eigenvalue (in magnitude) of `(A - λI)⁻¹` corresponds to the
+   * eigenvector of `A` for `λ`.
+   *
+   * @returns Matrix whose columns are eigenvectors aligned with EigenValues().
+   */
   EigenVectors(): Matrix {
-    // Approximate eigenvectors via inverse power iteration
-    const eigenvals=this.EigenValues();
-    const n=this.rows;
-    const vecs: number[][]=[];
-    for(const lambda of eigenvals) {
-      const shifted=this.Subtract(Matrix.identity(n).Multiply(new Matrix([[lambda]]))); // A - λI
-      // Simple approximation — power iteration from random vector
-      let v=Array.from({length:n},()=>Math.random());
-      for(let iter=0;iter<50;iter++) {
-        const mv=shifted.Multiply(new Matrix(v.map(x=>[x]))).col(0);
-        const norm=Math.sqrt(mv.reduce((s,x)=>s+x*x,0));
-        v=norm>1e-10?mv.map(x=>x/norm):v;
+    const eigenvals = this.EigenValues();
+    const n = this.rows;
+    const vecs: number[][] = [];
+
+    for (const lambda of eigenvals) {
+      // shifted = A - λI  (scalar λ on the diagonal)
+      const shifted = this.Clone();
+      for (let i = 0; i < n; i++) shifted._data[i][i] -= lambda;
+
+      // Inverse power iteration: solve (A - λI - μI) v_{k+1} = v_k
+      // For numerical stability use a tiny diagonal regularisation
+      const reg = this.Clone();
+      for (let i = 0; i < n; i++) reg._data[i][i] = shifted._data[i][i] + 1e-9;
+
+      let v = Array.from({ length: n }, () => Math.random() - 0.5);
+      for (let iter = 0; iter < 100; iter++) {
+        // Forward substitution would be cleaner; use Inverse for clarity
+        let w: number[];
+        try {
+          w = reg.Inverse().Multiply(new Matrix(v.map(x => [x]))).col(0);
+        } catch { w = v.slice(); }
+        const norm = Math.sqrt(w.reduce((s, x) => s + x * x, 0));
+        if (norm < 1e-15) break;
+        v = w.map(x => x / norm);
       }
       vecs.push(v);
     }
-    return new Matrix(vecs[0].map((_,i)=>vecs.map(v=>v[i])));
+
+    // Pack as columns
+    return new Matrix(Array.from({ length: n }, (_, i) =>
+      Array.from({ length: vecs.length }, (_, j) => vecs[j][i])
+    ));
   }
 
   toString(): string {
@@ -348,7 +374,7 @@ export class Matrix {
 }
 
 // ── Transform ─────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Transform — CSS + 3D transforms
+// Original Geometry.Transform — CSS + 3D transforms
 
 export class Transform {
   private _matrix: Matrix4;
@@ -454,7 +480,7 @@ export class Ray {
 }
 
 // ── Shapes ────────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Shapes — migrated with 2D geometry + SVG output
+// Original Geometry.Shapes — migrated with 2D geometry + SVG output
 // Original: Shape, Rectangle, Line, Curve, Path, Triangle, Circle, Plane, Polygon
 
 export class Rectangle {
@@ -518,7 +544,7 @@ export class Polygon {
 }
 
 // ── Solids ────────────────────────────────────────────────────────────────────
-// Original Golem.Geometry.Solids — 11 solid types with volume/surface area
+// Original Geometry.Solids — 11 solid types with volume/surface area
 // Box, Sphere, Cylinder, Torus, Cone(Frustum), Pyramid, TetraHedron,
 // Octahedron, ChamferBox, Tube
 
@@ -580,7 +606,7 @@ export class Tube {
   toString(): string { return `Tube(r=${this.outerRadius},ri=${this.innerRadius},h=${this.height})`; }
 }
 
-// Aliases — original Golem names
+// Aliases — original the legacy library names
 export const Shapes = { Rectangle, Circle, Triangle, Polygon };
 export const Solids = { Sphere, Box, Cylinder, Torus, Cone, Pyramid, Tube };
 

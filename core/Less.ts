@@ -20,7 +20,7 @@
  *     with nested rules flattened inside them
  *
  * Out of scope (intentionally): guards, loops, JS-eval, namespacing,
- * extend, detached rulesets, color functions. The Golem-Css-Less.html
+ * extend, detached rulesets, color functions. The the legacy library-Css-Less.html
  * example only exercises the subset above.
  *
  * @example

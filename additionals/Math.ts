@@ -5,7 +5,7 @@
  * @copyright Riccardo Angeli 2012-2024 All Rights Reserved
  * @license   AGPL-3.0 / Commercial
  *
- * Migrated and extended from Golem.Math (2012-2018).
+ * Originally developed 2012-2018, refined and extended for AriannA.
  * Every class and function from the original is preserved.
  * New additions: Vector2/3/4, Quaternion, Matrix4, LinearFunction,
  * QuadraticFunction, Complex, Statistics.
@@ -15,7 +15,7 @@
  *   import { Math, MathConstants, Fraction, Vector3 } from "./Math.ts";
  *   Core.use(Math);
  *
- *   // Original Golem API
+ *   // Original the legacy library API
  *   const f = new Fraction(3, 4);
  *   f.Sum(new Fraction(1, 4)).toString();  // "1/1"
  *
@@ -24,10 +24,10 @@
  *   const m = Matrix4.perspective(Math.PI/4, 16/9, 0.1, 1000);
  */
 
-import { Core } from "../core/index.ts";
+import { Core } from "../core";
 
 // ── MathConstants ─────────────────────────────────────────────────────────────
-// All 32 original Golem.Math.Constants preserved
+// All 32 constants preserved
 
 export const MathConstants = Object.freeze({
   // Mathematical
@@ -68,7 +68,7 @@ export const MathConstants = Object.freeze({
 });
 
 // ── Numbers ───────────────────────────────────────────────────────────────────
-// Golem.Math.Numbers helpers — migrated to TypeScript
+// AriannA Math.Numbers helpers — migrated to TypeScript
 
 export const Numbers = {
   isNatural (n: unknown): boolean {
@@ -87,7 +87,7 @@ export const Numbers = {
 };
 
 // ── Fraction ──────────────────────────────────────────────────────────────────
-// Original Golem.Math.Numbers.Fraction — all 11 operations preserved
+// Original Fraction — all 11 operations preserved
 // Added: MathML, LaTeX getters, Equals, LessThan, GreaterThan
 
 export class Fraction {
@@ -110,7 +110,7 @@ export class Fraction {
     this._rd = this._d / g;
   }
 
-  // Original Golem properties
+  // Original the legacy library properties
   get Numerator()  : number  { return this._n; }
   get Denominator(): number  { return this._d; }
   get Reduced()    : string  { return `${this._r}/${this._rd}`; }
@@ -139,7 +139,7 @@ export class Fraction {
   private static _gcd(a: number, b: number): number { return b===0?a:Fraction._gcd(b,a%b); }
   private static _lcm(a: number, b: number): number { return (a*b)/Fraction._gcd(a,b); }
 
-  // Original Golem operations
+  // Original the legacy library operations
   Sum       (b: Fraction|number): Fraction { const f=b instanceof Fraction?b:new Fraction(b); const d=Fraction._lcm(this._d,f._d); return new Fraction(this._n*(d/this._d)+f._n*(d/f._d),d); }
   Subtract  (b: Fraction|number): Fraction { const f=b instanceof Fraction?b:new Fraction(b); return this.Sum(new Fraction(-f._n,f._d)); }
   Multiply  (b: Fraction|number): Fraction { const f=b instanceof Fraction?b:new Fraction(b); return new Fraction(this._n*f._n,this._d*f._d); }
@@ -160,7 +160,7 @@ export class Fraction {
 }
 
 // ── MathFunctions ─────────────────────────────────────────────────────────────
-// All 27 original Golem.Math.Functions preserved and typed
+// All 27 constants preserved and typed
 
 export const MathFunctions = {
   Absolute           : (x: number)              => Math.abs(x),
@@ -193,7 +193,7 @@ export const MathFunctions = {
 };
 
 // ── Range ─────────────────────────────────────────────────────────────────────
-// Original Golem.Math.Objects.Range migrated
+// Original Range migrated
 
 export class Range {
   constructor(
@@ -220,7 +220,7 @@ export class Range {
 }
 
 // ── Monomial ──────────────────────────────────────────────────────────────────
-// Original Golem.Math.Objects.Monomial migrated + MathML/LaTeX added
+// Original Monomial migrated + MathML/LaTeX added
 
 export class Monomial {
   constructor(
@@ -249,7 +249,7 @@ export class Monomial {
 }
 
 // ── LinearFunction ────────────────────────────────────────────────────────────
-// NEW — not in original Golem, added for Horizon/Hiram data analysis
+// NEW — not in original the legacy library, added for Horizon/Hiram data analysis
 
 export class LinearFunction {
   constructor(public readonly slope: number, public readonly intercept: number) {}
@@ -309,7 +309,7 @@ export class ExponentialFunction {
 }
 
 // ── Vector2 ───────────────────────────────────────────────────────────────────
-// Maps to original Golem.Geometry.Vector2d — enhanced with new methods
+// Maps to original AriannA Geometry.Vector2d — enhanced with new methods
 
 export class Vector2 {
   constructor(public x=0, public y=0) {}
@@ -334,7 +334,7 @@ export class Vector2 {
 }
 
 // ── Vector3 ───────────────────────────────────────────────────────────────────
-// Maps to original Golem.Geometry.Vector3d — enhanced with full 3D operations
+// Maps to original AriannA Geometry.Vector3d — enhanced with full 3D operations
 
 export class Vector3 {
   constructor(public x=0, public y=0, public z=0) {}
@@ -372,7 +372,7 @@ export class Vector4 {
 }
 
 // ── Quaternion ────────────────────────────────────────────────────────────────
-// Original Golem.Math.Quaternion migrated — used for 3D rotations without gimbal lock
+// Original Quaternion migrated — used for 3D rotations without gimbal lock
 
 export class Quaternion {
   constructor(public x=0,public y=0,public z=0,public w=1) {}
@@ -420,7 +420,7 @@ export class Quaternion {
 }
 
 // ── Matrix4 ───────────────────────────────────────────────────────────────────
-// Maps to original Golem.Geometry.Matrix — GPU-ready Float32Array, column-major
+// Maps to original AriannA Geometry.Matrix — GPU-ready Float32Array, column-major
 // The original had LUP, QR, EigenValues — those are preserved in AriannAGeometry.ts (NxN Matrix)
 
 export class Matrix4 {
@@ -470,7 +470,7 @@ export class Matrix4 {
 }
 
 // ── Complex ───────────────────────────────────────────────────────────────────
-// Original Golem.Math.Complex migrated — extended with exp, pow, FFT-ready
+// Original Complex migrated — extended with exp, pow, FFT-ready
 
 export class Complex {
   constructor(public re=0, public im=0) {}
@@ -533,27 +533,96 @@ export const Statistics = {
   },
 };
 
-// ── Plugin ────────────────────────────────────────────────────────────────────
+// ── Math namespace ────────────────────────────────────────────────────────────
+//
+// AriannA's Math namespace mirrors the structure originally documented for the
+// Math additional: a single object that exposes every helper (Constants,
+// Numbers, Fraction, Vector*, Matrix4, Statistics, ...) as a property.
+//
+// CRITICAL naming note: Constants is a property of `Math`, NOT a standalone
+// `MathConstants` export. Use `Math.Constants.PI`, never `MathConstants.PI`.
+//
+// The legacy `MathConstants` symbol is kept for backwards compatibility but
+// marked as deprecated; new code should always go through `Math.Constants`.
+//
+// @example
+//   import Math from "./additionals/Math.ts";
+//   Math.Constants.PI;          // → 3.14159…
+//   Math.Constants.Phi;         // golden ratio
+//   const v = new Math.Vector3(1, 2, 3);
+//   const m = Math.Matrix4.perspective(Math.Constants.PI / 4, 16/9, 0.1, 1000);
 
-export const AriannaMath = {
-  name   : 'Math',
-  version: '1.0.0',
-  install(_core: typeof Core): void {
-    try {
-      Object.assign(window, {
-        MathConstants, Numbers, Fraction, MathFunctions,
-        Range, Monomial, LinearFunction, QuadraticFunction, ExponentialFunction,
-        Vector2, Vector3, Vector4, Quaternion, Matrix4,
-        Complex, Statistics,
-      });
-    } catch {}
-  },
-};
+/**
+ * The unified AriannA Math namespace. All sub-modules are exposed as properties
+ * so consumers only need a single import.
+ */
+export const AriannaMath = Object.freeze({
 
+    // ── Identity ──────────────────────────────────────────────────────────────
+    name   : 'Math',
+    version: '1.1.0',
 
-/** @deprecated Use AriannaMath */
-export { AriannaMath as Math };
+    // ── Sub-modules (the public surface) ──────────────────────────────────────
+
+    /** All mathematical & physical constants (PI, Phi, c, h, G, ...). */
+    Constants: MathConstants,
+
+    /** Number-theory helpers (isPrime, isNatural, gcd, lcm, ...). */
+    Numbers,
+
+    /** Generic mathematical free functions (clamp, lerp, factorial, ...). */
+    Functions: MathFunctions,
+
+    /** Statistics helpers (mean, variance, stdDev, median, ...). */
+    Statistics,
+
+    // ── Classes (constructors exposed as namespace members) ───────────────────
+    Fraction,
+    Range,
+    Monomial,
+    LinearFunction,
+    QuadraticFunction,
+    ExponentialFunction,
+    Vector2,
+    Vector3,
+    Vector4,
+    Quaternion,
+    Matrix4,
+    Complex,
+
+    // ── Plugin install hook ───────────────────────────────────────────────────
+    /**
+     * AriannA plugin entry point. Registers the namespace + every class on
+     * `window` for back-compat with the original 12-year codebase.
+     */
+    install(_core: typeof Core): void
+    {
+        try
+        {
+            Object.assign(window, {
+                // The full namespace (recommended)
+                Math: AriannaMath,
+                // Individual classes (legacy, for `new Vector3(...)` without import)
+                Numbers, Fraction, MathFunctions,
+                Range, Monomial, LinearFunction, QuadraticFunction, ExponentialFunction,
+                Vector2, Vector3, Vector4, Quaternion, Matrix4,
+                Complex, Statistics,
+            });
+        } catch {}
+    },
+});
+
+/**
+ * Default export — when consumers do `import Math from "./Math.ts"` they
+ * receive the unified namespace with `.Constants`, `.Vector3`, `.Matrix4`, ...
+ */
 export default AriannaMath;
+
+/**
+ * @deprecated Use `Math.Constants` instead. This export is preserved for the
+ * 12-year legacy codebase but new code should always use `Math.Constants`.
+ */
+export const MathConstantsLegacy = MathConstants;
 
 // ── Color ─────────────────────────────────────────────────────────────────────
 

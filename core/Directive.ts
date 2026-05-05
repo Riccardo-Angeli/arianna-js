@@ -38,7 +38,7 @@
  *
  *   Directive.template(el, data?)
  *     Process {{ expression }} template literals in el's innerHTML.
- *     Matches Golem's {{ planet }} / {{ object[planet] }} / {{ Level1A.Level2A }} syntax.
+ *     Matches the legacy library's {{ planet }} / {{ object[planet] }} / {{ Level1A.Level2A }} syntax.
  *
  *   Directive.bootstrap(root?)
  *     Scan the DOM for directive attributes and apply automatically.
@@ -75,12 +75,12 @@
  *     `<li data-i="${i}">${item.name}</li>`);
  *
  * @example
- *   // Foreach (object iteration — matches Golem's foreach="var planet in object")
+ *   // Foreach (object iteration — matches the legacy library's foreach="var planet in object")
  *   const update = Directive.foreach(ol, () => planets, (key, value) =>
  *     `<li>${key}: ${value}</li>`);
  *
  * @example
- *   // Template literals (matches Golem's {{ expr }} syntax)
+ *   // Template literals (matches the legacy library's {{ expr }} syntax)
  *   var example = 'EXAMPLE'; var literals = 'LITERALS';
  *   Directive.template(div, { example, literals });
  *   // Replaces {{ example }} → 'EXAMPLE', {{ literals }} → 'LITERALS'
@@ -131,7 +131,7 @@ function _resolveParent(parent: Element | string): Element | null
 
 // ── Directive ─────────────────────────────────────────────────────────────────
 
-export const Directive = Object.freeze(
+export class Directive
 {
 
     // ── if ─────────────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ export const Directive = Object.freeze(
      *   // When condition changes:
      *   update();
      */
-    if(
+    static if(
         parent    : Element | string,
         condition : Condition,
         then_?    : ContentArg,
@@ -197,7 +197,7 @@ export const Directive = Object.freeze(
 
         update();
         return update;
-    },
+    }
 
     // ── for ────────────────────────────────────────────────────────────────────
 
@@ -213,7 +213,7 @@ export const Directive = Object.freeze(
      *   const update = Directive.for(ul, () => items, (item, i) =>
      *     `<li data-i="${i}">${item.name}</li>`);
      */
-    for<T>(
+    static for<T>(
         parent   : Element | string,
         items    : T[] | (() => T[]),
         renderFn : RenderFn<T>,
@@ -240,13 +240,13 @@ export const Directive = Object.freeze(
 
         update();
         return update;
-    },
+    }
 
     // ── foreach ────────────────────────────────────────────────────────────────
 
     /**
      * Render an object's key/value pairs into a parent element.
-     * Matches the Golem `foreach="var planet in object"` HTML attribute pattern.
+     * Matches the the legacy library `foreach="var planet in object"` HTML attribute pattern.
      *
      * @param parent   - Parent element
      * @param obj      - Object or () => Object to iterate
@@ -260,7 +260,7 @@ export const Directive = Object.freeze(
      *   const update = Directive.foreach(ol, () => planets, (key, value) =>
      *     `<li class="Value">${key} : ${value}</li>`);
      */
-    foreach(
+    static foreach(
         parent   : Element | string,
         obj      : Record<string, unknown> | (() => Record<string, unknown>),
         renderFn : ObjRenderFn,
@@ -287,7 +287,7 @@ export const Directive = Object.freeze(
 
         update();
         return update;
-    },
+    }
 
     // ── while ──────────────────────────────────────────────────────────────────
 
@@ -308,7 +308,7 @@ export const Directive = Object.freeze(
      *     return html;
      *   });
      */
-    while(
+    static while(
         parent    : Element | string,
         condition : () => boolean,
         renderFn  : (iteration: number) => string | Element,
@@ -338,7 +338,7 @@ export const Directive = Object.freeze(
 
         update();
         return update;
-    },
+    }
 
     // ── switch ─────────────────────────────────────────────────────────────────
 
@@ -357,7 +357,7 @@ export const Directive = Object.freeze(
      *     default : '<div>404</div>',
      *   });
      */
-    switch(
+    static switch(
         parent : Element | string,
         value  : unknown | (() => unknown),
         cases  : Record<string, ContentArg>,
@@ -398,7 +398,7 @@ export const Directive = Object.freeze(
 
         update();
         return update;
-    },
+    }
 
     // ── bind ───────────────────────────────────────────────────────────────────
 
@@ -416,7 +416,7 @@ export const Directive = Object.freeze(
      *   const update = Directive.bind(span, 'textContent', () => state.State.name);
      *   state.on('State-Changed', update);
      */
-    bind(
+    static bind(
         el     : Element,
         prop   : string,
         source : unknown | (() => unknown),
@@ -429,7 +429,7 @@ export const Directive = Object.freeze(
         }
         update();
         return update;
-    },
+    }
 
     // ── show ───────────────────────────────────────────────────────────────────
 
@@ -444,7 +444,7 @@ export const Directive = Object.freeze(
      *   const update = Directive.show(panel, () => isVisible);
      *   state.on('State-Changed', update);
      */
-    show(el: HTMLElement, condition: Condition): UpdateFn
+    static show(el: HTMLElement, condition: Condition): UpdateFn
     {
         function update(): void
         {
@@ -452,7 +452,7 @@ export const Directive = Object.freeze(
         }
         update();
         return update;
-    },
+    }
 
     // ── model ──────────────────────────────────────────────────────────────────
 
@@ -470,7 +470,7 @@ export const Directive = Object.freeze(
      *   Directive.model(nameInput, state, 'name');
      *   // nameInput.value ↔ state.State.name
      */
-    model(
+    static model(
         input : HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
         state : { State: Record<string, unknown>; on(t: string, cb: (e: unknown) => void): void },
         key   : string,
@@ -487,7 +487,7 @@ export const Directive = Object.freeze(
         });
         // Initial sync
         input.value = String(state.State[key] ?? '');
-    },
+    }
 
     // ── on ─────────────────────────────────────────────────────────────────────
 
@@ -499,7 +499,7 @@ export const Directive = Object.freeze(
      *   Directive.on(btn, 'click', handler);
      *   Directive.on(form, 'submit', e => { e.preventDefault(); submit(); });
      */
-    on(
+    static on(
         el      : Element | string,
         types   : string,
         handler : EventListener,
@@ -510,7 +510,7 @@ export const Directive = Object.freeze(
         if (!target) return;
         types.split(/\s+|,|\|/g).filter(Boolean).forEach(t =>
             target.addEventListener(t, handler, opts));
-    },
+    }
 
     // ── template ───────────────────────────────────────────────────────────────
 
@@ -522,9 +522,9 @@ export const Directive = Object.freeze(
      *   {{ obj.prop }}                 — dot-path lookup (Level1A.Level2A)
      *   {{ obj[key] }}                 — bracket notation
      *
-     * Matches the Golem legacy {{ planet }} / {{ object[planet] }} /
-     * {{ Level1A.Level2A }} syntax from Golem-Components-Directives-TemplateLiterals.html
-     * and Golem-Components-Directives-ForEach.html.
+     * Matches the the legacy library legacy {{ planet }} / {{ object[planet] }} /
+     * {{ Level1A.Level2A }} syntax from the legacy library-Components-Directives-TemplateLiterals.html
+     * and the legacy library-Components-Directives-ForEach.html.
      *
      * @param el   - Element containing {{ }} placeholders
      * @param data - Data context object (defaults to window globals)
@@ -539,7 +539,7 @@ export const Directive = Object.freeze(
      *   Directive.template(el, { Level1A: { Level2A: 'Data Level2A Value' } });
      *   // {{ Level1A.Level2A }} → 'Data Level2A Value'
      */
-    template(el: Element, data?: Record<string, unknown>): void
+    static template(el: Element, data?: Record<string, unknown>): void
     {
         const ctx = data ?? (typeof window !== 'undefined' ? (window as unknown as Record<string, unknown>) : {});
 
@@ -564,7 +564,7 @@ export const Directive = Object.freeze(
         }
 
         el.innerHTML = el.innerHTML.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, expr) => resolve(expr));
-    },
+    }
 
     // ── bootstrap ──────────────────────────────────────────────────────────────
 
@@ -587,7 +587,7 @@ export const Directive = Object.freeze(
      * @example
      *   Directive.bootstrap(document.body, { items, user, state });
      */
-    bootstrap(
+    static bootstrap(
         root    : Element = document.body,
         context : Record<string, unknown> = {},
     ): void
@@ -648,9 +648,155 @@ export const Directive = Object.freeze(
             const [prop, expr] = spec.split(':').map(s => s.trim());
             if (prop && expr) Directive.bind(el, prop, () => evalExpr(expr));
         });
-    },
+    }
 
-});
+    // ────────────────────────────────────────────────────────────────────────────
+    // Instance API + custom directive registry
+    //
+    // In addition to the static helpers above, Directive can be instantiated to
+    // create reusable, named directive behaviors with optional `mounted` and
+    // `unmounted` lifecycle hooks. Both styles are supported in parallel:
+    //
+    //   1. Static one-shot:        Directive.if(el, () => x)
+    //   2. Static custom register: Directive.register('tooltip', { mounted, unmounted });
+    //                              Directive.apply('tooltip', el, 'Hello!');
+    //   3. Instance custom:        const tip = new Directive('tooltip', { mounted, unmounted });
+    //                              tip.apply(el, 'Hello!');
+    //                              tip.apply(otherEl, 'World!');     // reuse instance
+    //                              tip.unmount(el);                  // optional cleanup
+    //
+    // Pattern (3) gives you a stable handle on a directive — useful when you
+    // need to track multiple bindings, dispose them later, or pass the directive
+    // around as a first-class object.
+    //
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /** Directive instance hooks. */
+    /* (CustomDirectiveHooks declared module-level — see below) */
+
+    /** Name of this custom directive instance. */
+    readonly name: string;
+
+    /** Mount/unmount hooks for this instance. */
+    readonly hooks: CustomDirectiveHooks;
+
+    /** Map of element → user-supplied value, for unmount cleanup. */
+    #bindings = new WeakMap<Element, unknown>();
+
+    /**
+     * Create a custom, named directive that auto-registers itself in the global
+     * registry, so both `inst.apply(...)` and `Directive.apply(name, ...)` work.
+     *
+     * @param name  Unique directive name (e.g. 'tooltip', 'autosize').
+     * @param hooks Lifecycle hooks. Both are optional but at least one is
+     *              recommended; `mounted` is called on apply, `unmounted` on
+     *              `unmount(el)` or `Directive.unmount(name, el)`.
+     *
+     * @example
+     *   const tooltip = new Directive('tooltip', {
+     *       mounted(el, value) { el.setAttribute('title', String(value)); },
+     *       unmounted(el)      { el.removeAttribute('title'); },
+     *   });
+     *   tooltip.apply(buttonEl, 'Click to submit');
+     */
+    constructor(name: string, hooks: CustomDirectiveHooks)
+    {
+        this.name  = name;
+        this.hooks = hooks;
+        Directive._registry.set(name, this);
+    }
+
+    /**
+     * Apply this directive instance to a DOM element, calling its `mounted`
+     * hook if defined. Returns `this` for chaining.
+     */
+    apply(el: Element, value: unknown = undefined): this
+    {
+        this.#bindings.set(el, value);
+        this.hooks.mounted?.(el, value);
+        return this;
+    }
+
+    /**
+     * Run the `unmounted` hook for `el` (if defined) and forget the binding.
+     * Returns `true` if a binding existed, `false` otherwise.
+     */
+    unmount(el: Element): boolean
+    {
+        if (!this.#bindings.has(el)) return false;
+        const value = this.#bindings.get(el);
+        this.#bindings.delete(el);
+        this.hooks.unmounted?.(el, value);
+        return true;
+    }
+
+    // ── Static registry ────────────────────────────────────────────────────────
+
+    /** @internal */
+    static _registry = new Map<string, Directive>();
+
+    /**
+     * Register a custom directive in the global registry. Equivalent to
+     * `new Directive(name, hooks)` but reads more declaratively when you
+     * don't need to keep the instance handle around.
+     *
+     * @returns The created Directive instance, in case you want it.
+     *
+     * @example
+     *   Directive.register('autofocus', {
+     *       mounted(el) { (el as HTMLElement).focus(); },
+     *   });
+     */
+    static register(name: string, hooks: CustomDirectiveHooks): Directive
+    {
+        return new Directive(name, hooks);
+    }
+
+    /**
+     * Look up a registered custom directive by name and apply it to `el`.
+     * Returns the Directive instance, or `undefined` if no directive with that
+     * name was registered.
+     *
+     * @example
+     *   Directive.register('tooltip', { mounted(el, v) { ... } });
+     *   Directive.apply('tooltip', someElement, 'Hello!');
+     */
+    static apply(name: string, el: Element, value: unknown = undefined): Directive | undefined
+    {
+        const inst = Directive._registry.get(name);
+        if (!inst) return undefined;
+        return inst.apply(el, value);
+    }
+
+    /** Run the unmount hook of a registered directive on an element. */
+    static unmount(name: string, el: Element): boolean
+    {
+        const inst = Directive._registry.get(name);
+        if (!inst) return false;
+        return inst.unmount(el);
+    }
+
+    /** Look up a registered Directive instance by name. */
+    static get(name: string): Directive | undefined
+    {
+        return Directive._registry.get(name);
+    }
+}
+
+/**
+ * Lifecycle hooks for a custom Directive instance.
+ *
+ * Both hooks are optional. `mounted` is called when the directive is applied
+ * (via `inst.apply(el, value)` or `Directive.apply(name, el, value)`).
+ * `unmounted` is called on `inst.unmount(el)` or `Directive.unmount(name, el)`.
+ */
+export interface CustomDirectiveHooks
+{
+    /** Called when the directive is bound to an element. */
+    mounted?  : (el: Element, value: unknown) => void;
+    /** Called when the directive is unbound from an element. */
+    unmounted?: (el: Element, value: unknown) => void;
+}
 
 // ── TypeScript Decorators ──────────────────────────────────────────────────────
 
