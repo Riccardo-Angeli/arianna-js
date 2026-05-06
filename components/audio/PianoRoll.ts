@@ -129,6 +129,13 @@ export class PianoRoll extends Control<PianoRollOptions> {
     private _activeKeys = new Set<string>();   // pitch+id to track active
     private _eventLog  : MidiEvent[] = [];
 
+    // Loop state — Task B (Loop selection). Stored in BEATS (the PianoRoll's
+    // native time unit), not seconds. Convert via bpm if needed.
+    private _loop = { start: 0, end: 0, enabled: false };
+    private _elLoopRange?      : HTMLElement;
+    private _elLoopHandleLeft? : HTMLElement;
+    private _elLoopHandleRight?: HTMLElement;
+
     // DOM
     private _elKeys!       : HTMLElement;
     private _elRuler!      : HTMLElement;
@@ -470,6 +477,9 @@ export class PianoRoll extends Control<PianoRollOptions> {
         // Canvas pointer (for drawing & selecting)
         this._elCanvas.addEventListener('pointerdown', e => this._onCanvasDown(e));
 
+        // Ruler interactions: shift+drag → loop range, plain click → seek
+        this._elRuler.addEventListener('pointerdown', e => this._onRulerDown(e));
+
         // Sync scroll: keys vertical, ruler horizontal
         this._elCanvas.addEventListener('scroll', () => {
             this._elKeys.scrollTop  = this._elCanvas.scrollTop;
@@ -521,6 +531,190 @@ export class PianoRoll extends Control<PianoRollOptions> {
                 this._elRuler.appendChild(lbl);
             }
         }
+
+        // Loop overlay (Task B) — re-mounted on every ruler render
+        this._renderLoopOverlay();
+    }
+
+    /** Render the loop-range overlay + 2 resize handles. Beats-based. */
+    private _renderLoopOverlay(): void
+    {
+        if (this._elLoopRange)       this._elLoopRange.remove();
+        if (this._elLoopHandleLeft)  this._elLoopHandleLeft.remove();
+        if (this._elLoopHandleRight) this._elLoopHandleRight.remove();
+        this._elLoopRange = this._elLoopHandleLeft = this._elLoopHandleRight = undefined;
+
+        if (!this._loop.enabled || this._loop.end <= this._loop.start) return;
+
+        const left  = this._beatToX(this._loop.start);
+        const width = this._beatToX(this._loop.end - this._loop.start);
+
+        const range = document.createElement('div');
+        range.className = 'ar-pianoroll__loop-range';
+        range.style.left  = left + 'px';
+        range.style.width = width + 'px';
+        this._elRuler.appendChild(range);
+
+        const hL = document.createElement('div');
+        hL.className = 'ar-pianoroll__loop-handle ar-pianoroll__loop-handle--left';
+        hL.style.left = left + 'px';
+        this._elRuler.appendChild(hL);
+
+        const hR = document.createElement('div');
+        hR.className = 'ar-pianoroll__loop-handle ar-pianoroll__loop-handle--right';
+        hR.style.left = (left + width) + 'px';
+        this._elRuler.appendChild(hR);
+
+        this._elLoopRange       = range;
+        this._elLoopHandleLeft  = hL;
+        this._elLoopHandleRight = hR;
+
+        hL.addEventListener('pointerdown', e => this._onLoopHandleDown(e, 'left'));
+        hR.addEventListener('pointerdown', e => this._onLoopHandleDown(e, 'right'));
+        range.addEventListener('pointerdown', e => this._onLoopRangeDown(e));
+    }
+
+    private _onLoopHandleDown(e: PointerEvent, which: 'left' | 'right'): void
+    {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startLoop = { ...this._loop };
+        const handle = e.currentTarget as HTMLElement;
+        handle.setPointerCapture(e.pointerId);
+
+        const onMove = (ev: PointerEvent) => {
+            const dt = this._xToBeat(ev.clientX - startX);
+            if (which === 'left')
+            {
+                this._loop.start = Math.max(0, Math.min(startLoop.start + dt, this._loop.end - 0.05));
+            }
+            else
+            {
+                this._loop.end = Math.max(this._loop.start + 0.05, startLoop.end + dt);
+            }
+            this._renderLoopOverlay();
+        };
+        const onUp = () => {
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup',   onUp);
+            this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup',   onUp);
+    }
+
+    private _onLoopRangeDown(e: PointerEvent): void
+    {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startLoop = { ...this._loop };
+        const range = e.currentTarget as HTMLElement;
+        range.setPointerCapture(e.pointerId);
+
+        const onMove = (ev: PointerEvent) => {
+            const dt = this._xToBeat(ev.clientX - startX);
+            const len = startLoop.end - startLoop.start;
+            this._loop.start = Math.max(0, startLoop.start + dt);
+            this._loop.end   = this._loop.start + len;
+            this._renderLoopOverlay();
+        };
+        const onUp = () => {
+            range.removeEventListener('pointermove', onMove);
+            range.removeEventListener('pointerup',   onUp);
+            this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        };
+        range.addEventListener('pointermove', onMove);
+        range.addEventListener('pointerup',   onUp);
+    }
+
+    /**
+     * Pointer-down on the ruler. Shift+drag → create loop range; plain click
+     * → seek the playhead (in beats).
+     */
+    private _onRulerDown(e: PointerEvent): void
+    {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('ar-pianoroll__loop-range') ||
+            target.classList.contains('ar-pianoroll__loop-handle')) return;
+
+        const rect = this._elRuler.getBoundingClientRect();
+        const x0 = e.clientX - rect.left + this._elRuler.scrollLeft;
+        const b0 = this._xToBeat(x0);
+
+        if (e.shiftKey)
+        {
+            e.preventDefault();
+            e.stopPropagation();
+            this._loop.start   = b0;
+            this._loop.end     = b0 + 0.001;
+            this._loop.enabled = true;
+            this._renderLoopOverlay();
+            this._elRuler.setPointerCapture(e.pointerId);
+
+            const onMove = (ev: PointerEvent) => {
+                const x = ev.clientX - rect.left + this._elRuler.scrollLeft;
+                const b = this._xToBeat(x);
+                if (b >= b0) { this._loop.start = b0; this._loop.end = b; }
+                else         { this._loop.start = b;  this._loop.end = b0; }
+                this._renderLoopOverlay();
+            };
+            const onUp = () => {
+                this._elRuler.removeEventListener('pointermove', onMove);
+                this._elRuler.removeEventListener('pointerup',   onUp);
+                if (this._loop.end - this._loop.start < 0.05)
+                {
+                    this._loop = { start: 0, end: 0, enabled: false };
+                    this._renderLoopOverlay();
+                }
+                this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+            };
+            this._elRuler.addEventListener('pointermove', onMove);
+            this._elRuler.addEventListener('pointerup',   onUp);
+            return;
+        }
+
+        // Plain click → seek (write directly; the PianoRoll has no
+        // _renderPlayhead method — _tick + this fragment write to _elPlayhead).
+        this._playhead = Math.max(0, b0);
+        this._elPlayhead.style.left = this._beatToX(this._playhead) + 'px';
+        this._elPlayhead.style.display = 'block';
+    }
+
+    // ── Loop API (Task B) ──────────────────────────────────────────────────
+
+    /** Get the current loop range (start, end in beats; enabled flag). */
+    getLoop(): { start: number; end: number; enabled: boolean }
+    {
+        return { ...this._loop };
+    }
+
+    /** Define and enable the loop range. Values are in beats. */
+    setLoop(loop: { start: number; end?: number; enabled?: boolean }): this
+    {
+        this._loop.start = Math.max(0, loop.start);
+        if (loop.end !== undefined)     this._loop.end     = Math.max(this._loop.start + 0.05, loop.end);
+        if (loop.enabled !== undefined) this._loop.enabled = loop.enabled;
+        this._renderLoopOverlay();
+        this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        return this;
+    }
+
+    enableLoop(enabled: boolean): this
+    {
+        this._loop.enabled = enabled;
+        this._renderLoopOverlay();
+        this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        return this;
+    }
+
+    clearLoop(): this
+    {
+        this._loop = { start: 0, end: 0, enabled: false };
+        this._renderLoopOverlay();
+        this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        return this;
     }
 
     private _buildGrid(): void {
@@ -742,6 +936,26 @@ export class PianoRoll extends Control<PianoRollOptions> {
         const elapsed = (now - this._playStart) / 1000;
         this._playhead = elapsed * (bpm / 60);
 
+        // Loop wrap during playback (Task B). When loop is enabled and the
+        // playhead moves past loop.end, re-anchor _playStart so the playhead
+        // resumes from loop.start while time keeps flowing. Active note-on
+        // events get a clean note-off so we don't strand stuck notes.
+        if (this._loop.enabled && this._loop.end > this._loop.start && this._playhead >= this._loop.end)
+        {
+            // All currently-firing notes get a note-off — they'll re-trigger
+            // naturally on the next pass if their range still applies.
+            for (const key of this._activeKeys) {
+                const [p] = key.split(':');
+                this._fireMidi('note-off', parseInt(p!, 10), 0, 1);
+            }
+            this._activeKeys.clear();
+            // Re-anchor so playhead = loop.start at this exact moment
+            const beatToSec = 60 / bpm;
+            this._playStart = now - this._loop.start * beatToSec * 1000;
+            this._playhead  = this._loop.start;
+            this._emit('loop-wrap', { start: this._loop.start, end: this._loop.end });
+        }
+
         if (this._playhead >= totalBeats) { this.stop(); return; }
         this._elPlayhead.style.left = this._beatToX(this._playhead) + 'px';
 
@@ -849,6 +1063,12 @@ export class PianoRoll extends Control<PianoRollOptions> {
 .ar-pianoroll__note:hover { filter:brightness(1.08); }
 .ar-pianoroll__note-resize { position:absolute; right:0; top:0; bottom:0; width:6px; cursor:ew-resize; background:rgba(255,255,255,.2); }
 .ar-pianoroll__playhead { position:absolute; top:0; bottom:0; width:2px; background:#16a34a; pointer-events:none; box-shadow:0 0 4px rgba(22,163,74,.5); }
+
+/* Loop selection — overlay on the ruler (Task B) */
+.ar-pianoroll__loop-range  { position:absolute; top:0; bottom:0; background:rgba(228,12,136,0.18); border-top:2px solid #e40c88; border-bottom:2px solid #e40c88; cursor:grab; z-index:5; }
+.ar-pianoroll__loop-range:active { cursor:grabbing; }
+.ar-pianoroll__loop-handle { position:absolute; top:0; bottom:0; width:6px; margin-left:-3px; background:#e40c88; cursor:ew-resize; z-index:6; }
+.ar-pianoroll__loop-handle::after { content:''; position:absolute; top:50%; left:50%; width:2px; height:8px; margin:-4px 0 0 -1px; background:rgba(255,255,255,0.7); border-radius:1px; }
 
 .ar-pianoroll__vel { position:absolute; bottom:0; left:0; right:0; height:60px; background:rgba(245,245,245,.95); border-top:1px solid #ddd; pointer-events:none; }
 .ar-pianoroll__vel-bar { position:absolute; bottom:0; width:3px; background:#e40c88; border-radius:1px 1px 0 0; opacity:.7; }

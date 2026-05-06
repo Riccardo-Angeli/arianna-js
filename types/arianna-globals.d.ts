@@ -1,11 +1,15 @@
 /**
  * @file arianna-globals.d.ts
- * @description Module augmentation for the 'arianna' package.
+ * @description Module augmentation for the 'arianna' package. Extends the
+ *              base `arianna` module with the Pipeline 6 component family
+ *              (audio/video/composite/chat/graphics/payments/shipments)
+ *              and the Colors addon under `additionals/`.
  * @author Riccardo Angeli
  * @copyright Riccardo Angeli 2012–2026
  */
 
-declare module 'types/arianna' {
+declare module 'arianna' {
+    // ── Core (unchanged from baseline) ─────────────────────────────────────
     export { default as Core } from './core/Core.ts';
     export { default as Observable, signal, signalMono, effect, computed,
              batch, untrack, uuid, AriannATemplate } from './core/Observable.ts';
@@ -33,82 +37,63 @@ declare module 'types/arianna' {
     export type { WorkerTask }                     from './core/Workers.ts';
 }
 
-// ── Composite & audio re-exports ─────────────────────────────────────────────
+// ── Components — sub-path declarations ─────────────────────────────────────
+//
+// Each `components/<group>` re-exports its public surface through that
+// folder's index.ts. Declared as separate modules so consumers can import
+// granularly:
+//
+//   import { PaymentGateway } from 'arianna/components/payments';
+//   import { TrackingMulti }  from 'arianna/components/shipments';
+
+declare module 'arianna/components' {
+    export * from './components/audio/index.ts';
+    export * from './components/video/index.ts';
+    export * from './components/composite/index.ts';
+    export * from './components/graphics/2D/index.ts';
+    export * from './components/graphics/3D/index.ts';
+    export * from './components/graphics/colors/index.ts';
+    export * from './components/payments/index.ts';
+    export * from './components/shipments/index.ts';
+}
 
 declare module 'arianna/components/audio' {
-    export { AudioComponent }   from './components/audio/AudioComponent.ts';
-    export { PianoRoll }        from './components/audio/PianoRoll.ts';
-    export { AudioPlayer }      from './components/audio/AudioPlayer.ts';
-    export { ChannelStrip }     from './components/audio/ChannelStrip.ts';
-    export { AudioTrackEditor } from './components/audio/AudioTrackEditor.ts';
-    export { AudioEditor }      from './components/audio/AudioEditor.ts';
-
-    export type { AudioComponentOptions } from './components/audio/AudioComponent.ts';
-    export type {
-        PianoRollNote, PianoRollOptions, ExportedSequence,
-        MidiEvent, Tool, RunState,
-    } from './components/audio/PianoRoll.ts';
-    export type { AudioPlayerOptions } from './components/audio/AudioPlayer.ts';
-    export type { ChannelStripOptions, EQBand, EQBandSettings } from './components/audio/ChannelStrip.ts';
-    export type { AudioTrack, AudioClip, AudioTrackEditorOptions } from './components/audio/AudioTrackEditor.ts';
-    export type { AudioEditorOptions } from './components/audio/AudioEditor.ts';
+    export * from './components/audio/index.ts';
 }
 
 declare module 'arianna/components/video' {
-    export { VideoPlayer }      from './components/video/VideoPlayer.ts';
-    export { VideoTrackEditor } from './components/video/VideoTrackEditor.ts';
-    export type { VideoPlayerOptions } from './components/video/VideoPlayer.ts';
-    export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject } from './components/video/VideoTrackEditor.ts';
+    export * from './components/video/index.ts';
 }
 
 declare module 'arianna/components/composite' {
-    export { NodeEditor } from './components/composite/NodeEditor.ts';
-    export type {
-        NodeSchema, NodeInstance, WireInstance, WireStatus, PortSpec,
-        ParamSpec, NodeEditorOptions, ExportedGraph, TypeCheckFn, RunState,
-    } from './components/composite/NodeEditor.ts';
+    export * from './components/composite/index.ts';
 }
 
-// ── 'ariannajs' alias (modern package name) ──────────────────────────────────
-
-declare module 'ariannajs' {
-    export * from 'types/arianna';
+declare module 'arianna/components/graphics/2D' {
+    export * from './components/graphics/2D/index.ts';
 }
 
-declare module 'ariannajs/components' {
-    export * from './components/index.ts';
+declare module 'arianna/components/graphics/3D' {
+    export * from './components/graphics/3D/index.ts';
 }
 
-declare module 'ariannajs/components/audio' {
-    export { AudioComponent }   from './components/audio/AudioComponent.ts';
-    export { PianoRoll }        from './components/audio/PianoRoll.ts';
-    export { AudioPlayer }      from './components/audio/AudioPlayer.ts';
-    export { ChannelStrip }     from './components/audio/ChannelStrip.ts';
-    export { AudioTrackEditor } from './components/audio/AudioTrackEditor.ts';
-    export { AudioEditor }      from './components/audio/AudioEditor.ts';
-
-    export type { AudioComponentOptions } from './components/audio/AudioComponent.ts';
-    export type {
-        PianoRollNote, PianoRollOptions, ExportedSequence,
-        MidiEvent, Tool, RunState,
-    } from './components/audio/PianoRoll.ts';
-    export type { AudioPlayerOptions } from './components/audio/AudioPlayer.ts';
-    export type { ChannelStripOptions, EQBand, EQBandSettings } from './components/audio/ChannelStrip.ts';
-    export type { AudioTrack, AudioClip, AudioTrackEditorOptions } from './components/audio/AudioTrackEditor.ts';
-    export type { AudioEditorOptions } from './components/audio/AudioEditor.ts';
+declare module 'arianna/components/graphics/colors' {
+    export * from './components/graphics/colors/index.ts';
 }
 
-declare module 'ariannajs/components/video' {
-    export { VideoPlayer }      from './components/video/VideoPlayer.ts';
-    export { VideoTrackEditor } from './components/video/VideoTrackEditor.ts';
-    export type { VideoPlayerOptions } from './components/video/VideoPlayer.ts';
-    export type { VideoTrack, VideoClip, VideoSource, VideoTrackEditorOptions, ExportedProject } from './components/video/VideoTrackEditor.ts';
+declare module 'arianna/components/payments' {
+    export * from './components/payments/index.ts';
 }
 
-declare module 'ariannajs/components/composite' {
-    export { NodeEditor } from './components/composite/NodeEditor.ts';
-    export type {
-        NodeSchema, NodeInstance, WireInstance, WireStatus, PortSpec,
-        ParamSpec, NodeEditorOptions, ExportedGraph, TypeCheckFn, RunState,
-    } from './components/composite/NodeEditor.ts';
+declare module 'arianna/components/shipments' {
+    export * from './components/shipments/index.ts';
+}
+
+// ── Additionals — Colors addon ─────────────────────────────────────────────
+//
+// Pure-math colour conversions used by the colour-pickers and gradient
+// editors. Sits alongside the other addons (Three, Two, AI, Finance, …).
+
+declare module 'arianna/additionals/Colors' {
+    export * from './additionals/Colors.ts';
 }

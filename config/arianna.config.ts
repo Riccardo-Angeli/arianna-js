@@ -1,21 +1,21 @@
 /**
- * @file      arianna-wip.arianna-wip-config.ts
+ * @file      arianna.config.ts
  * @module    AriannAConfig
  * @author    Riccardo Angeli
  * @copyright Riccardo Angeli 2012-2024 All Rights Reserved
  *
  * AriannA configuration file — drop one of these in your project root.
- * Works like vite.arianna-wip-config.ts or react-scripts arianna-wip-config: zero-arianna-wip-config defaults,
+ * Works like vite.config.ts or react-scripts config: zero-config defaults,
  * opt-in to everything else.
  *
  * @example
- *   // arianna-wip.arianna-wip-config.ts (minimal)
- *   import { defineConfig } from 'arianna-wip';
+ *   // arianna.config.ts (minimal)
+ *   import { defineConfig } from 'arianna';
  *   export default defineConfig({});
  *
  * @example
- *   // arianna-wip.arianna-wip-config.ts (full)
- *   import { defineConfig } from 'arianna-wip';
+ *   // arianna.config.ts (full)
+ *   import { defineConfig } from 'arianna';
  *   export default defineConfig({
  *     entry  : './src/main.ts',
  *     outDir : './dist',
@@ -46,7 +46,7 @@ export interface GlobalsConfig {
 }
 
 /**
- * Namespace registration arianna-wip-config.
+ * Namespace registration config.
  * AriannA ships html, svg, mathML, x3d namespaces by default.
  * Add custom namespaces here.
  */
@@ -109,7 +109,7 @@ export interface DevServerConfig {
   https? : boolean;
   /** Open browser on start (default: false). */
   open?  : boolean;
-  /** HMR (Hot Module Replacement) arianna-wip-config. */
+  /** HMR (Hot Module Replacement) config. */
   hmr?   : boolean | { port?: number; host?: string };
 }
 
@@ -190,12 +190,12 @@ export interface AriannAConfig {
   addons?: AddonsConfig;
 
   /**
-   * Development server options (used by `arianna-wip dev`).
+   * Development server options (used by `arianna dev`).
    */
   server?: DevServerConfig;
 
   /**
-   * Build output options (used by `arianna-wip build`).
+   * Build output options (used by `arianna build`).
    */
   build?: BuildConfig;
 
@@ -230,7 +230,7 @@ export interface AriannAConfig {
    * - 'silent'  : No output.
    * - 'error'   : Errors only.
    * - 'warn'    : Warnings + errors.
-   * - 'arianna-wip-info'    : Default.
+   * - 'info'    : Default.
    * - 'verbose' : Full debug output.
    */
   logLevel?: 'silent' | 'error' | 'warn' | 'info' | 'verbose';
@@ -239,17 +239,17 @@ export interface AriannAConfig {
 // ── defineConfig ──────────────────────────────────────────────────────────────
 
 /**
- * Type-safe arianna-wip-config helper. Returns the arianna-wip-config unchanged with full IntelliSense.
- * Drop this in your `arianna-wip.arianna-wip-config.ts`:
+ * Type-safe config helper. Returns the config unchanged with full IntelliSense.
+ * Drop this in your `arianna.config.ts`:
  *
  * @example
- *   // Minimal — zero-arianna-wip-config defaults
- *   import { defineConfig } from 'arianna-wip';
+ *   // Minimal — zero-config defaults
+ *   import { defineConfig } from 'arianna';
  *   export default defineConfig({});
  *
  * @example
- *   // Full project arianna-wip-config
- *   import { defineConfig } from 'arianna-wip';
+ *   // Full project config
+ *   import { defineConfig } from 'arianna';
  *   export default defineConfig({
  *     globals : { Core: true, Real: true, State: true, Observable: true },
  *     namespaces: { html: true, svg: true, x3d: true },
@@ -258,14 +258,14 @@ export interface AriannAConfig {
  *     server  : { port: 3000, https: true, open: true },
  *     license : 'commercial',
  *     plugins : [RouterPlugin],
- *     logLevel: 'arianna-wip-info',
+ *     logLevel: 'info',
  *   });
  */
 export function defineConfig(config: AriannAConfig): AriannAConfig {
   return config;
 }
 
-// ── Default arianna-wip-config ────────────────────────────────────────────────────────────
+// ── Default config ────────────────────────────────────────────────────────────
 
 /**
  * Default configuration — all modules registered globally, standard namespaces,
@@ -313,7 +313,8 @@ export const defaultConfig: Required<AriannAConfig> = {
     name     : 'AriannA',
   },
   jsx: {
-},
+    runtime: 'real',
+  },
   license : 'agpl',
   plugins : [],
   logLevel: 'info',

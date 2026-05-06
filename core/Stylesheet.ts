@@ -15,7 +15,7 @@
  *   new Sheet(cssString)         — parse CSS text
  *   new Sheet(objectSyntax)      — object literal rule definitions
  *   new Sheet(url: string)       — fetch + parse an existing stylesheet URL
- *                                  (mirrors the legacy library: SheetES5("http://..."))
+ *                                  (mirrors Golem: SheetES5("http://..."))
  *
  * Static API:
  *   Sheet.Sheets      → all Sheet instances
@@ -25,7 +25,7 @@
  *   Sheet.Parse(text) → CSSStyleSheet from text
  *   Sheet.ToArray(t)  → CSSRule[] from text
  *   Sheet.Less(text)  → parse Less/Stylus-style text to CSS string
- *                        (mirrors the legacy library: SheetES5.Less(text))
+ *                        (mirrors Golem: SheetES5.Less(text))
  *
  * Instance API:
  *   // Getters / Setters
@@ -38,10 +38,10 @@
  *   .getIndex(rule | selector)
  *   .contains(rules)
  *   .get(rules)            — also accepts '@keyframes Name' selector
- *   .Get(rules)            — the legacy library alias for .get()
+ *   .Get(rules)            — Golem alias for .get()
  *   .set(rule, value)
- *   .insert(rules, index)  — the legacy library: sheet.Insert(rule, idx)
- *   .add(rules)            — the legacy library: sheet.Add(rule1, rule2)
+ *   .insert(rules, index)  — Golem: sheet.Insert(rule, idx)
+ *   .add(rules)            — Golem: sheet.Add(rule1, rule2)
  *   .unshift(rules)
  *   .remove(rules)
  *   .shift(n)
@@ -55,8 +55,8 @@
  *   sheet.on('Sheet-Changed', e => console.log(e));
  *
  * @example
- *   // the legacy library SheetES5 pattern — fetch existing stylesheet
- *   const sheet2 = new Sheet('http://localhost:8080/styles/legacy');
+ *   // Golem SheetES5 pattern — fetch existing stylesheet
+ *   const sheet2 = new Sheet('http://localhost:8080/styles/golem');
  *   sheet2.on('Sheet-Loaded', () => {
  *     console.log(sheet2.Get('@keyframes spin').Selector);
  *   });
@@ -71,13 +71,9 @@
  *   `);
  */
 
-import Observable from '../additionals/Observable.ts';
+import Observable from './Observable.ts';
 import { Rule } from './Rule.ts';
 import type { RuleDefinition, CSSProperties } from './Rule.ts';
-import { parseLess } from '../additionals/Less.ts';
-import { parseSass } from '../additionals/Sass.ts';
-import { parseScss } from '../additionals/Scss.ts';
-import { parseStylus } from '../additionals/Stylus.ts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,7 +85,6 @@ export type SheetInput =
     | CSSRule[]
     | Rule[]
     | Rule
-    | RuleDefinition
     | string
     | SheetObjectDef;
 
@@ -112,178 +107,139 @@ function toCamel(s: string): string
     return s.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
+// ── Less / Stylus parser ──────────────────────────────────────────────────────
 
 /**
- * Coerce any supported input (Rule | RuleDefinition | string CSS | CSSRule
- * | Sheet | array of any of the above) into a flat array of Rule instances.
+ * Minimal indentation-based CSS parser (Less/Stylus subset).
+ * Supports:
+ *   - Indented nesting → flat CSS with concatenated selectors
+ *   - Variable declarations: @primary: red  /  $primary = red  /  $primary: red
+ *   - Variable substitution in values
+ *   - Single-line comments (//)
+ *   - Standard @-rules pass through unchanged
  *
- * This is the workhorse used by `Sheet.add`, `Sheet.insert`, `Sheet.unshift`
- * — all of which now accept a fully variadic, mixed-type argument list.
+ * This is intentionally simple — it handles the patterns present in the
+ * Golem-Css-Less.html and Golem-Css-Stylus.html examples without requiring
+ * an external parser library.
  */
-function _toRules(inputs: unknown[]): Rule[]
+function parseLess(source: string): string
 {
-    const out: Rule[] = [];
-    for (const item of inputs.flat(2 as 1))
+    // 1 — strip single-line comments
+    const lines = source.replace(/\/\/[^\n]*/g, '').split('\n');
+
+    // 2 — collect variables
+    const vars: Record<string, string> = {};
+    const cleanLines = lines.map(line => {
+        const m = /^\s*[@$]([\w-]+)\s*[:=]\s*(.+)$/.exec(line ?? '');
+        // FIX: m[1] and m[2] possibly undefined with noUncheckedIndexedAccess
+        if (m && m[1] && m[2]) { vars[m[1]] = m[2].trim(); return null; }
+        return line;
+    }).filter(l => l !== null) as string[];
+
+    // 3 — substitute variables
+    const substituted = cleanLines.map(line => {
+        return line.replace(/[@$]([\w-]+)/g, (_, name: string) => vars[name] ?? `@${name}`);
+    });
+
+    // 4 — parse indentation tree → flat CSS
+    return buildCss(substituted, 0, []).css;
+}
+
+function getIndent(line: string): number
+{
+    const m = /^(\s*)/.exec(line);
+    // FIX: m[1] possibly undefined
+    return m ? (m[1]?.length ?? 0) : 0;
+}
+
+function buildCss(
+    lines : string[],
+    start : number,
+    parentSelectors: string[],
+): { css: string; end: number }
+{
+    let out   = '';
+    let i     = start;
+    let decls : string[] = [];
+
+    function flushDecls(selectors: string[])
     {
-        if (item === null || item === undefined) continue;
-        if (item instanceof Rule)               { out.push(item); continue; }
-        if (item instanceof Sheet)              { out.push(...item.Rules); continue; }
-        if (typeof item === 'string')           { out.push(...Rule.Parse(item)); continue; }
-        if (typeof item === 'object')
+        if (!decls.length) return;
+        const sel = selectors.join(', ');
+        out += `${sel} { ${decls.join('; ')}; }\n`;
+        decls = [];
+    }
+
+    // FIX: lines[start] possibly undefined
+    const baseIndent = start < lines.length ? getIndent(lines[start] ?? '') : 0;
+
+    while (i < lines.length)
+    {
+        // FIX: lines[i] possibly undefined
+        const raw = lines[i] ?? '';
+        const trimmed = raw.trim();
+
+        if (!trimmed) { i++; continue; }
+
+        const indent = getIndent(raw);
+
+        if (indent < baseIndent && i > start) break;
+
+        // FIX: lines[i + 1] possibly undefined
+        const nextLine = lines[i + 1];
+        const nextIndent = (i + 1 < lines.length && nextLine && nextLine.trim())
+            ? getIndent(nextLine)
+            : 0;
+
+        if (trimmed.endsWith('{'))
         {
-            // CSSRule (browser native) — has cssText
-            if (typeof CSSRule !== 'undefined' && item instanceof CSSRule)
-            { out.push(new Rule(item)); continue; }
-            // RuleDefinition object literal
-            if ('Selector' in (item as Record<string, unknown>)
-                || 'Contents' in (item as Record<string, unknown>)
-                || 'Content'  in (item as Record<string, unknown>)
-                || 'Body'     in (item as Record<string, unknown>)
-                || 'Rule'     in (item as Record<string, unknown>))
+            flushDecls(parentSelectors.length ? parentSelectors : [trimmed.slice(0, -1).trim()]);
+            out += raw + '\n';
+            i++;
+            let depth = 1;
+            while (i < lines.length && depth > 0)
             {
-                out.push(new Rule(item as RuleDefinition));
-                continue;
+                // FIX: l possibly undefined
+                const l = lines[i] ?? '';
+                out += l + '\n';
+                depth += (l.match(/\{/g) ?? []).length - (l.match(/\}/g) ?? []).length;
+                i++;
             }
+            continue;
         }
-        // Otherwise — silently skip (unknown shape)
-    }
-    return out;
-}
 
-// ── Sheet.Events — the legacy library-style named event slots ──────────────────────────────
+        if (nextIndent > indent && !trimmed.includes(':'))
+        {
+            flushDecls(parentSelectors.length ? parentSelectors : []);
+            const selectors = parentSelectors.length
+                ? parentSelectors.map(p => `${p} ${trimmed}`)
+                : [trimmed];
+            const child = buildCss(lines, i + 1, selectors);
+            out  += child.css;
+            i     = child.end;
+            continue;
+        }
 
-/**
- * Detail payload shared by all Sheet.Events.* listeners.
- *
- * Mirrors the rich payload from the legacy library's event system, ensuring the legacy
- * 22-example corpus (and especially the legacy library-Navigation-Css-Sheet.html) sees
- * exactly the field names it expects.
- */
-export interface SheetEventDetail
-{
-    /** All Sheet instances tracked by Sheet.Sheets at this moment. */
-    Sheets       : Sheet[];
-    /** The Sheet emitting the event. */
-    Sheet        : Sheet;
-    /** The owning <link> element (or null). */
-    Link         : HTMLLinkElement | null;
-    /** href of Link, when present. */
-    Path         : string;
-    /** The Events object on the Sheet. */
-    Events       : SheetEventsBag;
-    /** Method that triggered the event ('add', 'insert', 'remove', 'parse', ...). */
-    Name         : string;
-    /** Original arguments passed to that method. */
-    Arguments    : unknown[];
-    /** Reason hint for Changing/Changed. */
-    Reason?      : string;
-    /** Diff map: keys → new values. Populated for Changing/Changed. */
-    Changing?    : Record<string, unknown>;
-    Changed?     : Record<string, unknown>;
-    /** Rules being added (Adding/BeforeRulesAdd/AfterRulesAdd). */
-    AddingRules? : Rule[];
-    /** Rules already added so far in the current batch. */
-    AddedRules?  : Rule[];
-    /** Single rule being processed in Adding/Added. */
-    AddingRule?  : Rule;
-    AddedRule?   : Rule;
-}
+        // Declaration line: prop: value  or  prop value (Stylus)
+        if (trimmed.includes(':') || (trimmed.includes(' ') && !trimmed.startsWith('@')))
+        {
+            // Normalize: replace first space separator to : if no colon
+            const decl = trimmed.includes(':')
+                ? trimmed.replace(/:\s*/, ': ')
+                : trimmed.replace(/\s+/, ': ');
+            decls.push(decl.replace(/;$/, ''));
+        } else if (trimmed.startsWith('@'))
+        {
+            // @-rule — pass through
+            flushDecls(parentSelectors.length ? parentSelectors : []);
+            out += trimmed + '\n';
+        }
 
-/**
- * Type of every listener slot exposed via `sheet.Events.OnX`.
- * Listeners receive the rich {@link SheetEventDetail} object directly.
- */
-export type SheetEventListener = (e: SheetEventDetail) => void;
-
-/**
- * The 6 the legacy library-style named event slots, all initially null.
- * Assigning a function to any slot subscribes that listener via Observable.
- *
- * Mapping to the underlying Observable event names:
- *   OnSheetChanging       → 'change-before'
- *   OnSheetChanged        → 'change-after'
- *   OnBeforeSheetRulesAdd → 'rules-add-before'
- *   OnSheetRuleAdding     → 'rule-adding'
- *   OnSheetRuleAdded      → 'rule-added'
- *   OnAfterSheetRulesAdd  → 'rules-add-after'
- */
-export interface SheetEventsBag
-{
-    OnSheetChanging       : SheetEventListener | null;
-    OnSheetChanged        : SheetEventListener | null;
-    OnBeforeSheetRulesAdd : SheetEventListener | null;
-    OnSheetRuleAdding     : SheetEventListener | null;
-    OnSheetRuleAdded      : SheetEventListener | null;
-    OnAfterSheetRulesAdd  : SheetEventListener | null;
-}
-
-const SHEET_EVENT_SLOTS: ReadonlyArray<keyof SheetEventsBag> = [
-    'OnSheetChanging',
-    'OnSheetChanged',
-    'OnBeforeSheetRulesAdd',
-    'OnSheetRuleAdding',
-    'OnSheetRuleAdded',
-    'OnAfterSheetRulesAdd',
-];
-
-const SHEET_EVENT_NAME_MAP: Readonly<Record<keyof SheetEventsBag, string>> = {
-    OnSheetChanging       : 'change-before',
-    OnSheetChanged        : 'change-after',
-    OnBeforeSheetRulesAdd : 'rules-add-before',
-    OnSheetRuleAdding     : 'rule-adding',
-    OnSheetRuleAdded      : 'rule-added',
-    OnAfterSheetRulesAdd  : 'rules-add-after',
-};
-
-/**
- * Build the Events bag for a Sheet instance. Each slot is a getter/setter
- * that stores an internal Observable subscription. Assigning `null` removes
- * the previous listener; assigning a function replaces it.
- */
-function _makeSheetEvents(host: Sheet, ensureObs: () => Observable): SheetEventsBag
-{
-    const stored: Record<string, SheetEventListener | null> = {};
-    const cleanups: Record<string, (() => void) | null> = {};
-
-    const bag = {} as SheetEventsBag;
-
-    for (const slot of SHEET_EVENT_SLOTS)
-    {
-        Object.defineProperty(bag, slot, {
-            enumerable  : true,
-            configurable: false,
-            get(): SheetEventListener | null { return stored[slot] ?? null; },
-            set(v: SheetEventListener | null)
-            {
-                // Remove previous subscription
-                cleanups[slot]?.();
-                cleanups[slot] = null;
-                stored[slot]   = v;
-
-                if (typeof v !== 'function') return;
-
-                const eventName = SHEET_EVENT_NAME_MAP[slot];
-                const obs = ensureObs();
-                const wrapper = (e: { Type: string; Detail?: SheetEventDetail; [k: string]: unknown }) =>
-                {
-                    // The detail may live on .Detail (legacy emit) or on the event itself
-                    const detail = (e.Detail ?? e) as SheetEventDetail;
-                    // Ensure full Sheet/Sheets/Link/Path/Events fields are populated even
-                    // if the emitter forgot to set them.
-                    detail.Sheet  ??= host;
-                    detail.Sheets ??= Sheet.Sheets;
-                    detail.Link   ??= host.Link;
-                    detail.Path   ??= host.Link?.href ?? '';
-                    detail.Events ??= host.Events;
-                    v(detail);
-                };
-                obs.on(eventName, wrapper);
-                cleanups[slot] = () => obs.off(eventName, wrapper);
-            },
-        });
+        i++;
     }
 
-    return bag;
+    flushDecls(parentSelectors.length ? parentSelectors : []);
+    return { css: out, end: i };
 }
 
 // ── Sheet class ───────────────────────────────────────────────────────────────
@@ -301,29 +257,18 @@ export class Sheet
     #state   : string                = 'Loading';
     #index   : number                = -1;
     #name    : string                = '';
-    #obs     : Observable | null     = null;
-    #events  : SheetEventsBag;
+    #obs     : Observable | false    = false;
 
     // ── Constructor ─────────────────────────────────────────────────────────────
 
     constructor(...args: SheetInput[])
     {
         this.#head = document.head ?? document.documentElement;
-        this.#events = _makeSheetEvents(this, () =>
-        {
-            if (!this.#obs) this.#obs = new Observable(this);
-            return this.#obs;
-        });
 
-        // Multi-arg variadic constructor: convert all to Rule[]
-        let input: SheetInput | undefined;
-        if (args.length === 0) input = undefined;
-        else if (args.length === 1) input = args[0];
-        else
-        {
-            // Multiple arguments → coerce all into Rule[]
-            input = _toRules(args as unknown[]);
-        }
+        const input: SheetInput | undefined =
+            args.length === 0    ? undefined :
+            args.length === 1    ? args[0] :
+            /* multiple args */    args.filter(a => a instanceof Rule) as Rule[];
 
         if (input !== undefined)
         {
@@ -355,19 +300,12 @@ export class Sheet
                     this.#rules = [input];
                 } else if (Array.isArray(input))
                 {
-                    this.#rules = _toRules(input);
+                    this.#rules = input.map(r =>
+                        r instanceof Rule ? r : new Rule(r as CSSRule)
+                    );
                 } else
                 {
-                    // Distinguish RuleDefinition vs SheetObjectDef:
-                    //   RuleDef has Selector/Contents/Content/Body/Rule top-level
-                    const obj = input as Record<string, unknown>;
-                    if ('Selector' in obj || 'Contents' in obj
-                        || 'Content' in obj || 'Body' in obj || 'Rule' in obj)
-                    {
-                        this.#rules = [new Rule(obj as unknown as RuleDefinition)];
-                    } else {
-                        this.#parseObject(input as SheetObjectDef);
-                    }
+                    this.#parseObject(input as SheetObjectDef);
                 }
             }
         }
@@ -451,12 +389,12 @@ export class Sheet
                 this.#loading = false;
                 this.#state   = 'Loaded';
                 this.#flushRules();
-                this.#emit('change-after', { Name: 'load', Reason: 'load', Changed: { url } });
+                this.#emit('Sheet-Loaded', { url });
             })
             .catch(err => {
                 this.#state   = 'Error';
                 this.#loading = false;
-                this.#emit('change-after', { Name: 'error', Reason: 'error', Changed: { url, error: String(err) } });
+                this.#emit('Sheet-Error', { url, error: err });
             });
     }
 
@@ -471,27 +409,10 @@ export class Sheet
         });
     }
 
-    /**
-     * Internal: fire a Sheet-level event through the underlying Observable.
-     * Preserves the legacy the legacy library payload fields (Sheets, Sheet, Link, Path,
-     * Events, Name, Arguments, Reason, Changing/Changed, AddingRules, ...).
-     * Unused fields are still set to sensible defaults so listeners can rely
-     * on their presence.
-     */
-    #emit(type: string, partial: Partial<SheetEventDetail> & { Name?: string; Arguments?: unknown[] }): void
+    #emit(type: string, detail: unknown): void
     {
-        if (!this.#obs) return;
-        const detail: SheetEventDetail = {
-            Sheets    : Sheet.Sheets,
-            Sheet     : this,
-            Link      : this.#link,
-            Path      : this.#link?.href ?? '',
-            Events    : this.#events,
-            Name      : partial.Name ?? type,
-            Arguments : partial.Arguments ?? [],
-            ...partial,
-        };
-        this.#obs.fire({ Type: type, ...detail } as unknown as { Type: string; [k: string]: unknown });
+        if (this.#obs instanceof Observable)
+            this.#obs.fire({ Type: type, Sheet: this, Detail: detail });
     }
 
     // ── Static API ───────────────────────────────────────────────────────────────
@@ -541,7 +462,7 @@ export class Sheet
 
     /**
      * Parse Less/Stylus-style indented CSS to a standard CSS string.
-     * Mirrors the legacy library's SheetES5.Less(text).
+     * Mirrors Golem's SheetES5.Less(text).
      *
      * Supports: indented nesting, variables (@var: val / $var: val / $var = val),
      * variable substitution, single-line comments (//).
@@ -556,10 +477,10 @@ export class Sheet
      *   `);
      *   // → '.box { background: dodgerblue; }\n.box .inner { color: white; }\n'
      */
-    static Less(text: string): string   { return parseLess(text); }
-    static Sass(text: string): string   { return parseSass(text); }
-    static Scss(text: string): string   { return parseScss(text); }
-    static Stylus(text: string): string { return parseStylus(text); }
+    static Less(text: string): string
+    {
+        return parseLess(text);
+    }
 
     // ── Getters ────────────────────────────────────────────────────────────────
 
@@ -634,32 +555,14 @@ export class Sheet
         v.forEach(r => this.add(r));
     }
 
-    /** Underlying Observable. Created lazily on first access or first event subscription. */
-    get Observable(): Observable
-    {
-        if (!this.#obs) this.#obs = new Observable(this);
-        return this.#obs;
-    }
+    get Observable(): Observable | false { return this.#obs; }
     set Observable(v: Observable | boolean)
     {
         if (v === true)  { this.#obs = new Observable(this); return; }
-        if (v === false) { this.#obs = null; return; }
+        if (v === false) { this.#obs = false; return; }
         if (v instanceof Observable) this.#obs = v;
     }
 
-    /**
-     * the legacy library-style Events bag: assign listener functions to named slots.
-     *
-     * @example
-     *   sheet.Events.OnSheetChanging = e => console.log('changing', e.Reason);
-     *   sheet.Events.OnSheetChanged  = e => console.log('changed',  e.Changed);
-     */
-    get Events(): SheetEventsBag { return this.#events; }
-
-    /**
-     * Direct subscription on the internal Observable using AriannA event names.
-     * Useful when you want event names not exposed via the Events bag.
-     */
     on(types: string, cb: (e: object) => void): this
     {
         if (!this.#obs) this.#obs = new Observable(this);
@@ -696,7 +599,7 @@ export class Sheet
         }
 
         this.#flushRules();
-        this.#emit('change-after', { Name: 'parse', Reason: 'parse' });
+        this.#emit('Sheet-Changed', { action: 'parse' });
         return this;
     }
 
@@ -720,7 +623,7 @@ export class Sheet
     /**
      * Get one or more rules by selector string, Rule instance, or CSSRule.
      * Also accepts @-rule selectors: sheet.get('@keyframes spin')
-     * Mirrors the legacy library: sheet.Get('@keyframes Settete')
+     * Mirrors Golem: sheet.Get('@keyframes Settete')
      */
     get(...rules: SheetRule[]): Rule | Rule[] | undefined
     {
@@ -738,7 +641,7 @@ export class Sheet
     }
 
     /**
-     * the legacy library alias for .get() — mirrors sheet.Get('@keyframes Settete').
+     * Golem alias for .get() — mirrors sheet.Get('@keyframes Settete').
      */
     Get(...rules: SheetRule[]): Rule | Rule[] | undefined
     {
@@ -758,151 +661,64 @@ export class Sheet
             r.merge(value);
 
         this.#flushRules();
-        this.#emit('change-after', { Name: 'set', Reason: 'set', Changed: { index: i, rule: r } });
+        this.#emit('Sheet-Changed', { action: 'set', index: i, rule: r });
         return this;
     }
 
-    /**
-     * Insert one or more rules (or another Sheet's rules) at a position.
-     *
-     * Variadic and mixed-type, same as {@link Sheet.add}. The last numeric
-     * argument (if any) is the index. If absent, defaults to the index given
-     * as second argument (legacy 2-arg signature) or the end.
-     *
-     * Emits the same 5-event sequence as `add`, with Name='insert'.
-     *
-     * @example
-     *   sheet.Insert(sheet2);                // merge another Sheet at end
-     *   sheet.Insert(css3, 1);               // insert single at index 1
-     *   sheet.Insert(css3, rule5, 1);        // insert two at index 1
-     *   sheet.Insert(rule1, ruleDef, 0);     // mixed types, head insert
-     */
-    insert(...args: unknown[]): this
+    insert(rules: SheetRule | SheetRule[], index: number): this
     {
-        const last   = args[args.length - 1];
-        const hasIdx = typeof last === 'number';
-        const idx    = hasIdx ? (last as number) : this.#rules.length;
-        const src    = hasIdx ? args.slice(0, -1) : args;
+        const arr = Array.isArray(rules) ? rules : [rules];
+        const newRules = arr.map(r =>
+            r instanceof Rule ? r :
+            typeof r === 'string' ? Rule.Parse(r)[0] :
+            new Rule(r as CSSRule)
+        ).filter(Boolean) as Rule[];
 
-        const newRules = _toRules(src);
-        if (newRules.length === 0) return this;
-
-        return this.#bulkInsert(newRules, idx, args, 'insert');
+        this.#rules.splice(index, 0, ...newRules);
+        this.#flushRules();
+        this.#emit('Sheet-Changed', { action: 'insert', index, count: newRules.length });
+        return this;
     }
 
-    /** the legacy library alias: sheet.Insert(rule, idx) */
-    Insert(...args: unknown[]): this
+    /** Golem alias: sheet.Insert(rule, idx) */
+    Insert(rules: SheetRule | SheetRule[], index: number): this
     {
-        return this.insert(...args);
+        return this.insert(rules, index);
     }
 
-    /**
-     * Add one or more rules (or whole Sheets) to this sheet.
-     *
-     * Accepts any combination of: Rule, RuleDefinition object, raw CSS string,
-     * native CSSRule, another Sheet (its rules are inlined). A trailing numeric
-     * argument is treated as an insertion index (the legacy library-compatible).
-     *
-     * Emits, in order:
-     *   1. 'rules-add-before' (single event, AddingRules = all incoming rules)
-     *   2. 'rule-adding'      (per rule, AddingRule + AddingRules + AddedRules)
-     *   3. 'rule-added'       (per rule)
-     *   4. 'rules-add-after'  (single event, AddedRules = full set)
-     *   5. 'change-after'     (single, Name: 'add')
-     *
-     * @example
-     *   sheet.Add(css1, css2);                   // legacy 2-rule add
-     *   sheet.Add(rule1, rule2, rule3);          // variadic
-     *   sheet.Add(sheet2);                       // merge another Sheet
-     *   sheet.Add(rule1, ruleDefObj, ".x { y: 1 }");  // mixed types
-     *   sheet.Add(rule1, rule2, 5);              // insert at index 5
-     */
-    add(...args: unknown[]): this
+    add(...args: (SheetRule | SheetRule[] | number)[]): this
     {
         const last   = args[args.length - 1];
         const hasIdx = typeof last === 'number';
         const idx    = hasIdx ? (last as number) : undefined;
-        const src    = hasIdx ? args.slice(0, -1) : args;
+        const src    = (hasIdx ? args.slice(0, -1) : args) as (SheetRule | SheetRule[])[];
 
-        const newRules = _toRules(src);
-        if (newRules.length === 0) return this;
+        const flat = src.flat() as SheetRule[];
+        const newRules = flat.map(r =>
+            r instanceof Rule ? r :
+            typeof r === 'string' ? (Rule.Parse(r)[0] ?? null) :
+            new Rule(r as CSSRule)
+        ).filter(Boolean) as Rule[];
 
-        return this.#bulkInsert(newRules, idx, args, 'add');
-    }
-
-    /**
-     * Internal bulk insertion used by `add` / `insert` / `unshift`.
-     * Centralises the 5-event emission pattern and `splice`/`push` logic.
-     */
-    #bulkInsert(newRules: Rule[], idx: number | undefined, originalArgs: unknown[], name: string): this
-    {
-        const addingRules = newRules.slice();
-        const addedRules : Rule[] = [];
-
-        // Phase 1 — global "before" event
-        this.#emit('rules-add-before', {
-            Name: name, Arguments: originalArgs,
-            AddingRules: addingRules, AddedRules: addedRules,
-        });
-
-        // Determine target index
-        const at = (typeof idx === 'number' && idx >= 0 && idx <= this.#rules.length)
-            ? idx : this.#rules.length;
-
-        for (let i = 0; i < newRules.length; i++)
-        {
-            const rule = newRules[i]!;
-
-            // Phase 2 — per-rule "adding"
-            this.#emit('rule-adding', {
-                Name: name, Arguments: originalArgs,
-                AddingRules: addingRules, AddedRules: addedRules.slice(),
-                AddingRule: rule,
-            });
-
-            // Insert
-            this.#rules.splice(at + i, 0, rule);
-            addedRules.push(rule);
-
-            // Phase 3 — per-rule "added"
-            this.#emit('rule-added', {
-                Name: name, Arguments: originalArgs,
-                AddingRules: addingRules, AddedRules: addedRules.slice(),
-                AddedRule: rule,
-            });
-        }
-
-        // Phase 4 — global "after"
-        this.#emit('rules-add-after', {
-            Name: name, Arguments: originalArgs, AddedRules: addedRules,
-        });
+        if (hasIdx && idx! >= 0 && idx! <= this.#rules.length)
+            this.#rules.splice(idx!, 0, ...newRules);
+        else
+            this.#rules.push(...newRules);
 
         this.#flushRules();
-
-        // Phase 5 — generic change-after
-        this.#emit('change-after', {
-            Name: name, Reason: name, Arguments: originalArgs,
-            Changed: { count: addedRules.length, at },
-        });
-
+        this.#emit('Sheet-Changed', { action: 'add', count: newRules.length });
         return this;
     }
 
-    /** the legacy library alias: sheet.Add(rule1, rule2) */
-    Add(...args: unknown[]): this
+    /** Golem alias: sheet.Add(rule1, rule2) */
+    Add(...args: (SheetRule | SheetRule[] | number)[]): this
     {
         return this.add(...args);
     }
 
-    /**
-     * Add rules at the beginning of the sheet.
-     * Accepts any input that {@link Sheet.add} does.
-     */
-    unshift(...rules: unknown[]): this
+    unshift(...rules: (SheetRule | SheetRule[])[]): this
     {
-        const newRules = _toRules(rules);
-        if (newRules.length === 0) return this;
-        return this.#bulkInsert(newRules, 0, rules, 'unshift');
+        return this.insert(rules.flat() as SheetRule[], 0);
     }
 
     remove(...rules: (SheetRule | number)[]): this
@@ -913,7 +729,7 @@ export class Sheet
             if (i >= 0) this.#rules.splice(i, 1);
         }
         this.#flushRules();
-        this.#emit('change-after', { Name: 'remove', Reason: 'remove' });
+        this.#emit('Sheet-Changed', { action: 'remove' });
         return this;
     }
 
@@ -921,7 +737,7 @@ export class Sheet
     {
         this.#rules.splice(0, n);
         this.#flushRules();
-        this.#emit('change-after', { Name: 'shift', Reason: 'shift', Changed: { count: n } });
+        this.#emit('Sheet-Changed', { action: 'shift', count: n });
         return this;
     }
 
@@ -929,7 +745,7 @@ export class Sheet
     {
         this.#rules.splice(this.#rules.length - n, n);
         this.#flushRules();
-        this.#emit('change-after', { Name: 'pop', Reason: 'pop', Changed: { count: n } });
+        this.#emit('Sheet-Changed', { action: 'pop', count: n });
         return this;
     }
 
@@ -937,7 +753,7 @@ export class Sheet
     {
         this.#rules = [];
         this.#flushRules();
-        this.#emit('change-after', { Name: 'clear', Reason: 'clear' });
+        this.#emit('Sheet-Changed', { action: 'clear' });
         return this;
     }
 
@@ -954,13 +770,13 @@ if (typeof window !== 'undefined')
     });
 
     /**
-     * SheetES5 — the legacy library legacy factory function.
+     * SheetES5 — Golem legacy factory function.
      * Called as: SheetES5()  or  SheetES5("http://...")
      * Also has SheetES5.Less(text) static method.
      *
      * @example
      *   var sheet  = new SheetES5();
-     *   var sheet2 = SheetES5("http://localhost:8080/styles/legacy");
+     *   var sheet2 = SheetES5("http://localhost:8080/styles/golem");
      *   sheet2.Get('@keyframes Settete').Selector;
      *   SheetES5.Less(lessText);
      */

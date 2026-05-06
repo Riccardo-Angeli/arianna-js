@@ -128,7 +128,7 @@ declare global {
         requestAdapter(desc?: object): Promise<GPUAdapter | null>;
         getPreferredCanvasFormat(): string;
     }
-    interface Navigator { readonly gpu: GPU; }
+    interface Navigator { readonly gpu: GPU | undefined; }
     interface HTMLCanvasElement {
         getContext(id: 'webgpu'): GPUCanvasContext | null;
     }
@@ -1310,6 +1310,7 @@ export class WebGPURenderer
         if (this.#pipelineCache.has(key)) return this.#pipelineCache.get(key)!;
 
         const device = this.#device!;
+        if (!navigator.gpu) throw new Error('WebGPU not supported');
         const fmt    = navigator.gpu.getPreferredCanvasFormat();
 
         const shaderModule = device.createShaderModule({

@@ -5,26 +5,28 @@
  *
  * DAW-style transport control bar (Cubase/Nuendo/Pro Tools/Logic terminology).
  *
- * Centralised playback control intended to be reused across all of AriannA's
- * timeline editors (AudioTrackEditor, VideoTrackEditor, PianoRoll, NodeEditor)
- * as well as standalone players. Emits semantic events that the host editor
- * binds to its own playback engine.
+ * Centralised playback control intended to be reused across every AriannA
+ * timeline editor — both audio (AudioTrackEditor, PianoRoll) and video
+ * (VideoTrackEditor) — and any composite scenario (NodeEditor with timeline,
+ * automation curves, etc.). It lives in `components/composite/` because it
+ * is cross-domain by design: not specific to audio, not specific to video.
+ *
+ * The counter supports both display worlds:
+ *
+ *   • Bars mode  → `bars.beats.ticks`     (musical use: audio + MIDI)
+ *   • SMPTE mode → `HH:MM:SS:FF`           (video use: 24/25/29.97/30/50/59.94/60 fps)
  *
  *   ⏮  rewind   ▶  play   ⏸  pause   ⏹  stop   ⏭  ff   ⏺  record   🔁  loop
  *
  *   │   00:00:24:15   │   12.3.480   │   BPM 120   │   4/4   │   48 kHz   │
- *
- * Two mutually exclusive timecode modes can be toggled at runtime:
- *
- *   • SMPTE  — HH:MM:SS:FF  (frames, configurable framerate)
- *   • Bars   — bars.beats.ticks (480 ticks per beat by default)
  *
  * The component does not own a playback engine — it emits events and the host
  * decides how to interpret them. The host calls `setTime(seconds)` to drive
  * the displayed counter, and the bar drives the host through events.
  *
  * @example
- *   import { TransportBar } from 'ariannajs/components/audio';
+ *   // Audio editor
+ *   import { TransportBar } from 'ariannajs/components/composite';
  *
  *   const tb = new TransportBar('#transport', { bpm: 128, timeSignature: '4/4' });
  *
@@ -36,8 +38,16 @@
  *   tb.on('bpm',    e  => engine.setBpm(e.bpm));
  *   tb.on('record', e  => engine.setRecording(e.enabled));
  *
- *   // Host drives the displayed counter
  *   engine.on('tick', t => tb.setTime(t));
+ *
+ * @example
+ *   // Video editor — same component, SMPTE mode, no record button
+ *   const tb = new TransportBar('#transport', {
+ *       mode: 'smpte', framerate: 30, showRecord: false,
+ *   });
+ *   tb.on('play',  () => videoPlayer.play());
+ *   tb.on('seek',  e  => videoPlayer.seek(e.time));
+ *   videoPlayer.on('timeupdate', e => tb.setTime(e.time));
  */
 
 import { Control, type CtrlOptions } from '../core/Control.ts';

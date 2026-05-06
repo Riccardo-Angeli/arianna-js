@@ -312,12 +312,16 @@ export class Analyser {
     get node(): AnalyserNode { return this.#node; }
 
     getSpectrum(): Float32Array {
-        this.#node.getFloatFrequencyData(this.#fftBuf as Float32Array<ArrayBuffer>);
+        // Cast through `any` because the DOM API expects `Float32Array<ArrayBuffer>`
+        // (concrete) while TS infers `Float32Array<ArrayBufferLike>` (the union),
+        // and refining the buffer type at construction is not portable across
+        // TS major versions.
+        this.#node.getFloatFrequencyData(this.#fftBuf as never);
         return this.#fftBuf;
     }
 
     getWaveform(): Float32Array {
-        this.#node.getFloatTimeDomainData(this.#timeBuf as Float32Array<ArrayBuffer>);
+        this.#node.getFloatTimeDomainData(this.#timeBuf as never);
         return this.#timeBuf;
     }
 

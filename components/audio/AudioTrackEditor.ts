@@ -66,6 +66,12 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
     private _selected = new Set<string>();
     private _clipboard: AudioClip[] = [];
 
+    // Loop state — Task B (Loop selection)
+    private _loop = { start: 0, end: 0, enabled: false };
+    private _elLoopRange?      : HTMLElement;
+    private _elLoopHandleLeft? : HTMLElement;
+    private _elLoopHandleRight?: HTMLElement;
+
     protected declare _output: GainNode;
     private _activeSources: AudioBufferSourceNode[] = [];
     private _playing = false;
@@ -274,7 +280,23 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
 
     private _tickPlayhead = (): void => {
         if (!this._playing) return;
-        this._playhead = this._audioCtx.currentTime - this._playStart;
+        let pos = this._audioCtx.currentTime - this._playStart;
+
+        // Loop wrap during playback (Task B)
+        if (this._loop.enabled && this._loop.end > this._loop.start && pos >= this._loop.end)
+        {
+            // Restart playback from loop.start by re-anchoring _playStart
+            const overshoot = pos - this._loop.start;
+            this._playStart = this._audioCtx.currentTime - this._loop.start;
+            pos = this._audioCtx.currentTime - this._playStart;
+            this._emit('loop-wrap', { start: this._loop.start, end: this._loop.end, overshoot });
+            // Note: the audio sources themselves don't auto-reseek — host must
+            // restart playback. We emit the event; for fully-automatic loop
+            // playback the host would call .pause() then .play() inside the
+            // 'loop-wrap' handler.
+        }
+
+        this._playhead = pos;
         this._renderPlayhead();
         this._playRAF = requestAnimationFrame(this._tickPlayhead);
     };
@@ -323,6 +345,9 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
         });
         const elZoom = r('zoom') as HTMLInputElement;
         elZoom.addEventListener('input', () => this.setZoom(parseFloat(elZoom.value)));
+
+        // Ruler interactions: shift+drag → loop range, plain click → seek
+        this._elRuler.addEventListener('pointerdown', e => this._onRulerDown(e));
 
         this._renderRuler();
     }
@@ -393,6 +418,212 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
                 this._elRuler.appendChild(lbl);
             }
         }
+
+        // Loop overlay (Task B) — re-mounted on every ruler render
+        this._renderLoopOverlay();
+    }
+
+    /**
+     * Render the loop-range overlay and resize handles on the ruler.
+     * Visible only when `_loop.enabled && start < end`. Re-rendered after
+     * every zoom / pxPerSec change to stay aligned with the timeline.
+     */
+    private _renderLoopOverlay(): void
+    {
+        if (this._elLoopRange)       this._elLoopRange.remove();
+        if (this._elLoopHandleLeft)  this._elLoopHandleLeft.remove();
+        if (this._elLoopHandleRight) this._elLoopHandleRight.remove();
+        this._elLoopRange = this._elLoopHandleLeft = this._elLoopHandleRight = undefined;
+
+        if (!this._loop.enabled || this._loop.end <= this._loop.start) return;
+
+        const px = this._pxPerSec * this._zoom;
+        const left  = this._loop.start * px;
+        const width = (this._loop.end - this._loop.start) * px;
+
+        const range = document.createElement('div');
+        range.className = 'ar-audiotrack__loop-range';
+        range.style.left  = left + 'px';
+        range.style.width = width + 'px';
+        this._elRuler.appendChild(range);
+
+        const hL = document.createElement('div');
+        hL.className = 'ar-audiotrack__loop-handle ar-audiotrack__loop-handle--left';
+        hL.style.left = left + 'px';
+        this._elRuler.appendChild(hL);
+
+        const hR = document.createElement('div');
+        hR.className = 'ar-audiotrack__loop-handle ar-audiotrack__loop-handle--right';
+        hR.style.left = (left + width) + 'px';
+        this._elRuler.appendChild(hR);
+
+        this._elLoopRange       = range;
+        this._elLoopHandleLeft  = hL;
+        this._elLoopHandleRight = hR;
+
+        hL.addEventListener('pointerdown', e => this._onLoopHandleDown(e, 'left'));
+        hR.addEventListener('pointerdown', e => this._onLoopHandleDown(e, 'right'));
+        range.addEventListener('pointerdown', e => this._onLoopRangeDown(e));
+    }
+
+    private _onLoopHandleDown(e: PointerEvent, which: 'left' | 'right'): void
+    {
+        e.preventDefault();
+        e.stopPropagation();
+        const px = this._pxPerSec * this._zoom;
+        const startX = e.clientX;
+        const startLoop = { ...this._loop };
+        const handle = e.currentTarget as HTMLElement;
+        handle.setPointerCapture(e.pointerId);
+
+        const onMove = (ev: PointerEvent) => {
+            const dt = (ev.clientX - startX) / px;
+            if (which === 'left')
+            {
+                this._loop.start = Math.max(0, Math.min(startLoop.start + dt, this._loop.end - 0.05));
+            }
+            else
+            {
+                this._loop.end = Math.max(this._loop.start + 0.05, startLoop.end + dt);
+            }
+            this._renderLoopOverlay();
+        };
+        const onUp = () => {
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup',   onUp);
+            this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup',   onUp);
+    }
+
+    private _onLoopRangeDown(e: PointerEvent): void
+    {
+        e.preventDefault();
+        e.stopPropagation();
+        const px = this._pxPerSec * this._zoom;
+        const startX = e.clientX;
+        const startLoop = { ...this._loop };
+        const range = e.currentTarget as HTMLElement;
+        range.setPointerCapture(e.pointerId);
+
+        const onMove = (ev: PointerEvent) => {
+            const dt = (ev.clientX - startX) / px;
+            const len = startLoop.end - startLoop.start;
+            this._loop.start = Math.max(0, startLoop.start + dt);
+            this._loop.end   = this._loop.start + len;
+            this._renderLoopOverlay();
+        };
+        const onUp = () => {
+            range.removeEventListener('pointermove', onMove);
+            range.removeEventListener('pointerup',   onUp);
+            this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        };
+        range.addEventListener('pointermove', onMove);
+        range.addEventListener('pointerup',   onUp);
+    }
+
+    /**
+     * Pointer-down on the timeline ruler: shift+drag → create loop range,
+     * plain click → seek the playhead.
+     */
+    private _onRulerDown(e: PointerEvent): void
+    {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('ar-audiotrack__loop-range') ||
+            target.classList.contains('ar-audiotrack__loop-handle')) return;
+
+        const px = this._pxPerSec * this._zoom;
+        const rect = this._elRuler.getBoundingClientRect();
+        const x0 = e.clientX - rect.left + this._elRuler.scrollLeft;
+        const t0 = x0 / px;
+
+        if (e.shiftKey)
+        {
+            e.preventDefault();
+            e.stopPropagation();
+            this._loop.start   = t0;
+            this._loop.end     = t0 + 0.001;
+            this._loop.enabled = true;
+            this._renderLoopOverlay();
+            this._elRuler.setPointerCapture(e.pointerId);
+
+            const onMove = (ev: PointerEvent) => {
+                const x = ev.clientX - rect.left + this._elRuler.scrollLeft;
+                const t = x / px;
+                if (t >= t0) { this._loop.start = t0; this._loop.end = t; }
+                else         { this._loop.start = t;  this._loop.end = t0; }
+                this._renderLoopOverlay();
+            };
+            const onUp = () => {
+                this._elRuler.removeEventListener('pointermove', onMove);
+                this._elRuler.removeEventListener('pointerup',   onUp);
+                if (this._loop.end - this._loop.start < 0.05)
+                {
+                    this._loop = { start: 0, end: 0, enabled: false };
+                    this._renderLoopOverlay();
+                }
+                this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+            };
+            this._elRuler.addEventListener('pointermove', onMove);
+            this._elRuler.addEventListener('pointerup',   onUp);
+            return;
+        }
+
+        // Plain click on ruler → seek
+        this.setPlayhead(t0);
+    }
+
+    // ── Loop API (Task B) ──────────────────────────────────────────────────
+
+    getLoop(): { start: number; end: number; enabled: boolean }
+    {
+        return { ...this._loop };
+    }
+
+    setLoop(loop: { start: number; end?: number; enabled?: boolean }): this
+    {
+        this._loop.start   = Math.max(0, loop.start);
+        if (loop.end !== undefined)     this._loop.end     = Math.max(this._loop.start + 0.05, loop.end);
+        if (loop.enabled !== undefined) this._loop.enabled = loop.enabled;
+        this._renderLoopOverlay();
+        this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        return this;
+    }
+
+    enableLoop(enabled: boolean): this
+    {
+        this._loop.enabled = enabled;
+        this._renderLoopOverlay();
+        this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        return this;
+    }
+
+    clearLoop(): this
+    {
+        this._loop = { start: 0, end: 0, enabled: false };
+        this._renderLoopOverlay();
+        this._emit('change', { kind: 'loop', loop: { ...this._loop } });
+        return this;
+    }
+
+    /**
+     * Programmatically move the playhead. If a loop range is active and the
+     * new position is past `loop.end`, wraps to `loop.start` and emits
+     * `loop-wrap` so the host playback engine can resync. This is also called
+     * automatically by `_tickPlayhead` during real-time playback.
+     */
+    setPlayhead(t: number): this
+    {
+        let pos = Math.max(0, t);
+        if (this._loop.enabled && this._loop.end > this._loop.start && pos >= this._loop.end)
+        {
+            pos = this._loop.start;
+            this._emit('loop-wrap', { start: this._loop.start, end: this._loop.end });
+        }
+        this._playhead = pos;
+        this._renderPlayhead();
+        return this;
     }
 
     private _renderClips(): void {
@@ -456,8 +687,34 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
                    : e.target === rh ? 'resize-right'
                                      : 'move';
 
-        const startX = e.clientX;
-        const startStart = c.start, startDur = c.duration, startOffset = c.offset;
+        const startX        = e.clientX;
+        const startStart    = c.start, startDur = c.duration, startOffset = c.offset;
+        const startTrackId  = c.trackId;
+
+        // Cross-track drag bookkeeping (Task A) — capture row bounds at start
+        const rowRects: Array<{ id: string; top: number; bottom: number }> = [];
+        this._elTrackBodies.querySelectorAll<HTMLElement>('[data-track-row]').forEach(row => {
+            const rect = row.getBoundingClientRect();
+            rowRects.push({ id: row.dataset.trackRow!, top: rect.top, bottom: rect.bottom });
+        });
+
+        const rowAt = (clientY: number): string | null => {
+            for (const r of rowRects) if (clientY >= r.top && clientY < r.bottom) return r.id;
+            if (rowRects.length === 0) return null;
+            if (clientY < rowRects[0]!.top)                    return rowRects[0]!.id;
+            if (clientY >= rowRects[rowRects.length-1]!.bottom) return rowRects[rowRects.length-1]!.id;
+            return null;
+        };
+
+        let highlightedRow: HTMLElement | null = null;
+        const setHighlight = (rowId: string | null) => {
+            if (highlightedRow) highlightedRow.classList.remove('ar-audiotrack__body--dropping');
+            highlightedRow = rowId
+                ? this._elTrackBodies.querySelector<HTMLElement>(`[data-track-row="${rowId}"]`)
+                : null;
+            if (highlightedRow) highlightedRow.classList.add('ar-audiotrack__body--dropping');
+        };
+
         el.setPointerCapture(e.pointerId);
 
         const onMove = (ev: PointerEvent) => {
@@ -475,12 +732,36 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
             }
             el.style.left  = (c.start * px) + 'px';
             el.style.width = Math.max(20, c.duration * px) + 'px';
+
+            // Cross-track Y movement (Task A)
+            if (mode === 'move') {
+                const targetTrackId = rowAt(ev.clientY);
+                if (targetTrackId && targetTrackId !== c.trackId) {
+                    c.trackId = targetTrackId;
+                    const newRow = this._elTrackBodies.querySelector<HTMLElement>(`[data-track-row="${targetTrackId}"]`);
+                    if (newRow && el.parentElement !== newRow) newRow.appendChild(el);
+                    const t = this._tracks.find(x => x.id === targetTrackId);
+                    if (t) {
+                        el.style.background  = (t.color || '#3b82f6') + '33';
+                        el.style.borderColor =  t.color || '#3b82f6';
+                    }
+                    setHighlight(targetTrackId);
+                } else if (!targetTrackId) {
+                    setHighlight(null);
+                } else {
+                    setHighlight(targetTrackId);
+                }
+            }
         };
 
         const onUp = () => {
             el.removeEventListener('pointermove', onMove);
             el.removeEventListener('pointerup',   onUp);
+            setHighlight(null);
             this._renderClips();
+            if (mode === 'move' && c.trackId !== startTrackId) {
+                this._emit('change', { kind: 'move-clip-track', clip: c, fromTrack: startTrackId, toTrack: c.trackId });
+            }
             this._emit('change', { kind: mode + '-clip', clip: c });
         };
         el.addEventListener('pointermove', onMove);
@@ -555,6 +836,15 @@ export class AudioTrackEditor extends AudioComponent<AudioTrackEditorOptions> {
 .ar-audiotrack__clip-h.right { right:0; }
 .ar-audiotrack__wave { position:absolute; left:0; top:18px; pointer-events:none; }
 .ar-audiotrack__playhead { position:absolute; top:0; bottom:0; width:2px; background:#16a34a; pointer-events:none; box-shadow:0 0 4px rgba(22,163,74,.5); z-index:10; }
+
+/* Cross-track drag — destination row highlight (Task A) */
+.ar-audiotrack__body--dropping { background:rgba(228,12,136,0.10); outline:1px dashed #e40c88; outline-offset:-1px; }
+
+/* Loop selection — overlay on the ruler (Task B) */
+.ar-audiotrack__loop-range  { position:absolute; top:0; bottom:0; background:rgba(228,12,136,0.18); border-top:2px solid #e40c88; border-bottom:2px solid #e40c88; cursor:grab; z-index:5; }
+.ar-audiotrack__loop-range:active { cursor:grabbing; }
+.ar-audiotrack__loop-handle { position:absolute; top:0; bottom:0; width:6px; margin-left:-3px; background:#e40c88; cursor:ew-resize; z-index:6; }
+.ar-audiotrack__loop-handle::after { content:''; position:absolute; top:50%; left:50%; width:2px; height:8px; margin:-4px 0 0 -1px; background:rgba(255,255,255,0.7); border-radius:1px; }
 `;
         document.head.appendChild(s);
     }

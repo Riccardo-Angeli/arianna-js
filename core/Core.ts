@@ -494,7 +494,7 @@ export const Events = Object.freeze(
 
     /**
      * Add a DOM event listener to one or more targets.
-     * Prefer `Observable.On` for full listener tracking and registry.
+     * Prefer `Observable.On` for full listener shipments and registry.
      * @example
      *   Core.Events.On(element, 'click', handler);
      *   Core.Events.On('.btn', 'click mouseenter', handler, { passive: true });
