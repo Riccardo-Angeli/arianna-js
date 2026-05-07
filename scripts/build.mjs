@@ -9,26 +9,22 @@
  *   node scripts/build.mjs --skip-min       (skip the minify+gzip step)
  *   node scripts/build.mjs --skip-meta      (don't copy package.json / README / LICENSE)
  *
- * What it produces in release/dist/:
- *   arianna.js                  (plain ESM bundle from core/index.ts)
- *   arianna.js.gz               (gzipped plain)
- *   arianna.min.js              (terser-minified)
- *   arianna.min.js.gz           (gzipped minified)
- *   arianna.min.js.map          (source map for the minified)
- *   arianna-components.js       (plain ESM bundle from components/index.ts)
- *   arianna-components.js.gz
- *   arianna-components.min.js
- *   arianna-components.min.js.gz
- *   arianna-components.min.js.map
- *   package.json                (publish-ready, copied from release/package.json
- *                                or fallback to root package.json)
- *   README.md, LICENSE, CHANGELOG.md   (from release/ or root)
+ * What it produces in release/dist/, for each of the three bundles
+ * (arianna · arianna-components · arianna-additionals):
+ *
+ *   <name>.js                  (plain ESM bundle)
+ *   <name>.js.gz               (gzipped plain)
+ *   <name>.min.js              (terser-minified)
+ *   <name>.min.js.gz           (gzipped minified)
+ *   <name>.min.js.map          (source map for the minified)
+ *
+ * Plus the publish-ready package.json + README + LICENSE + CHANGELOG.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync,
          statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
-import { resolve, basename, dirname } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
 import { minify as terserMinify } from 'terser';
@@ -47,6 +43,11 @@ const outDir    = resolve(repoRoot, 'release', 'dist');
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 
 // ── Bundles ───────────────────────────────────────────────────────────────────
+//
+// `external` keeps cross-bundle imports as runtime imports so each file stays
+// independent. components and additionals both depend on the core kernel,
+// and reference `arianna` so consumers must also load `arianna.js` first.
+
 const bundles = [
     {
         name    : 'arianna',
@@ -56,6 +57,11 @@ const bundles = [
     {
         name    : 'arianna-components',
         entry   : 'components/index.ts',
+        external: ['arianna', '@tauri-apps/*'],
+    },
+    {
+        name    : 'arianna-additionals',
+        entry   : 'additionals/index.ts',
         external: ['arianna', '@tauri-apps/*'],
     },
 ];
@@ -79,17 +85,23 @@ const writeGzip = (srcPath) => {
 
 // ── 1. esbuild ────────────────────────────────────────────────────────────────
 async function buildBundle(bundle) {
+    const entry = resolve(repoRoot, bundle.entry);
+    if (!existsSync(entry)) {
+        console.log(`⚠  ${bundle.entry} not found — skipping ${bundle.name}`);
+        return;
+    }
+
     const outfile = resolve(outDir, `${bundle.name}.js`);
 
     const esbuildOpts = {
-        entryPoints: [resolve(repoRoot, bundle.entry)],
-        bundle     : true,
-        format     : 'esm',
-        platform   : 'browser',
-        target     : 'es2022',
+        entryPoints  : [entry],
+        bundle       : true,
+        format       : 'esm',
+        platform     : 'browser',
+        target       : 'es2022',
         outfile,
-        external   : bundle.external,
-        sourcemap  : false,    // we generate the .map only on the minified
+        external     : bundle.external,
+        sourcemap    : false,
         legalComments: 'eof',
         absWorkingDir: repoRoot,
     };
@@ -106,8 +118,8 @@ async function buildBundle(bundle) {
 
     if (skipMin) return;
 
-    // ── 2. terser → .min.js + .min.js.map ────────────────────────────────────
-    const code  = readFileSync(outfile, 'utf8');
+    // ── 2. terser ────────────────────────────────────────────────────────────
+    const code   = readFileSync(outfile, 'utf8');
     const minOut = resolve(outDir, `${bundle.name}.min.js`);
     const mapOut = resolve(outDir, `${bundle.name}.min.js.map`);
 
@@ -133,11 +145,11 @@ async function buildBundle(bundle) {
 
     console.log(`✓ terser  → release/dist/${bundle.name}.min.js  (${fmtSize(sizeOf(minOut))})`);
 
-    // ── 3. gzip both versions ────────────────────────────────────────────────
+    // ── 3. gzip ──────────────────────────────────────────────────────────────
     const plainGzSize = writeGzip(outfile);
     const minGzSize   = writeGzip(minOut);
-    console.log(`✓ gzip    → release/dist/${bundle.name}.js.gz      (${fmtSize(plainGzSize)})`);
-    console.log(`✓ gzip    → release/dist/${bundle.name}.min.js.gz  (${fmtSize(minGzSize)})`);
+    console.log(`✓ gzip    → release/dist/${bundle.name}.js.gz       (${fmtSize(plainGzSize)})`);
+    console.log(`✓ gzip    → release/dist/${bundle.name}.min.js.gz   (${fmtSize(minGzSize)})`);
 }
 
 // ── 4. Copy publish-ready meta files ──────────────────────────────────────────
@@ -145,7 +157,6 @@ function copyMetaFiles() {
     if (skipMeta) return;
 
     const candidates = [
-        // [destination name, [source paths in priority order]]
         ['package.json',  ['release/package.json', 'dist-package.json', 'package.json']],
         ['README.md',     ['release/README.md',    'dist-README.md',    'README.md']],
         ['LICENSE',       ['release/LICENSE',      'LICENSE']],
