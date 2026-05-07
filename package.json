@@ -5,45 +5,89 @@
   "author": "Riccardo Angeli <riccardo.angeli@arianna.dev> (https://arianna.dev)",
   "license": "MIT",
   "type": "module",
-  "main"  : "./core/index.ts",
+  "main": "./core/index.ts",
   "module": "./core/index.ts",
-  "types" : "./types/arianna.d.ts",
+  "types": "./types/arianna.d.ts",
   "bin": {
     "arianna": "./cli/arianna-cli.mjs"
   },
   "exports": {
     ".": {
-      "import" : "./core/index.ts",
+      "import": "./core/index.ts",
       "default": "./core/index.ts"
     },
-
-    "./core"             : { "import": "./core/Core.ts" },
-    "./observable"       : { "import": "./core/Observable.ts" },
-    "./state"            : { "import": "./core/State.ts" },
-    "./real"             : { "import": "./core/Real.ts" },
-    "./virtual"          : { "import": "./core/Virtual.ts" },
-    "./rule"             : { "import": "./core/Rule.ts" },
-    "./stylesheet"       : { "import": "./core/Stylesheet.ts" },
-    "./directive"        : { "import": "./core/Directive.ts" },
-    "./context"          : { "import": "./core/Context.ts" },
-    "./namespace"        : { "import": "./core/Namespace.ts" },
-    "./jsx-runtime"      : { "import": "./core/jsx/jsx-runtime.ts" },
-    "./jsx-dev-runtime"  : { "import": "./core/jsx/jsx-dev-runtime.ts" },
-
-    "./components"       : { "import": "./components/index.ts" },
-    "./components/audio"           : { "import": "./components/audio/index.ts" },
-    "./components/video"           : { "import": "./components/video/index.ts" },
-    "./components/composite"       : { "import": "./components/composite/index.ts" },
-    "./components/graphics/2D"     : { "import": "./components/graphics/2D/index.ts" },
-    "./components/graphics/3D"     : { "import": "./components/graphics/3D/index.ts" },
-    "./components/graphics/colors" : { "import": "./components/graphics/colors/index.ts" },
-    "./components/payments"        : { "import": "./components/payments/index.ts" },
-    "./components/shipments"       : { "import": "./components/shipments/index.ts" },
-
-    "./additionals"          : { "import": "./additionals/index.ts" },
-    "./additionals/Colors"   : { "import": "./additionals/Colors.ts" },
-
-    "./config"           : { "import": "./arianna-config/arianna.config.ts" }
+    "./core": {
+      "import": "./core/Core.ts"
+    },
+    "./observable": {
+      "import": "./core/Observable.ts"
+    },
+    "./state": {
+      "import": "./core/State.ts"
+    },
+    "./real": {
+      "import": "./core/Real.ts"
+    },
+    "./virtual": {
+      "import": "./core/Virtual.ts"
+    },
+    "./rule": {
+      "import": "./core/Rule.ts"
+    },
+    "./stylesheet": {
+      "import": "./core/Stylesheet.ts"
+    },
+    "./directive": {
+      "import": "./core/Directive.ts"
+    },
+    "./context": {
+      "import": "./core/Context.ts"
+    },
+    "./namespace": {
+      "import": "./core/Namespace.ts"
+    },
+    "./jsx-runtime": {
+      "import": "./core/jsx/jsx-runtime.ts"
+    },
+    "./jsx-dev-runtime": {
+      "import": "./core/jsx/jsx-dev-runtime.ts"
+    },
+    "./components": {
+      "import": "./components/index.ts"
+    },
+    "./components/audio": {
+      "import": "./components/audio/index.ts"
+    },
+    "./components/video": {
+      "import": "./components/video/index.ts"
+    },
+    "./components/composite": {
+      "import": "./components/composite/index.ts"
+    },
+    "./components/graphics/2D": {
+      "import": "./components/graphics/2D/index.ts"
+    },
+    "./components/graphics/3D": {
+      "import": "./components/graphics/3D/index.ts"
+    },
+    "./components/graphics/colors": {
+      "import": "./components/graphics/colors/index.ts"
+    },
+    "./components/payments": {
+      "import": "./components/payments/index.ts"
+    },
+    "./components/shipments": {
+      "import": "./components/shipments/index.ts"
+    },
+    "./additionals": {
+      "import": "./additionals/index.ts"
+    },
+    "./additionals/Colors": {
+      "import": "./additionals/Colors.ts"
+    },
+    "./config": {
+      "import": "./arianna-config/arianna.config.ts"
+    }
   },
   "files": [
     "core/",
@@ -60,35 +104,57 @@
     "tsconfig.json"
   ],
   "keywords": [
-    "framework", "ui", "reactive", "web-components", "custom-elements",
-    "dom", "typescript", "state-management", "virtual-dom", "css-in-js",
-    "tauri", "wasm", "svg", "mathml", "x3d", "observable", "pub-sub",
-    "color-picker", "gradient-editor", "audio-editor", "video-editor",
-    "piano-roll", "chat", "payments", "shipments"
+    "framework",
+    "ui",
+    "reactive",
+    "web-components",
+    "custom-elements",
+    "dom",
+    "typescript",
+    "state-management",
+    "virtual-dom",
+    "css-in-js",
+    "tauri",
+    "wasm",
+    "svg",
+    "mathml",
+    "x3d",
+    "observable",
+    "pub-sub",
+    "color-picker",
+    "gradient-editor",
+    "audio-editor",
+    "video-editor",
+    "piano-roll",
+    "chat",
+    "payments",
+    "shipments"
   ],
   "repository": {
     "type": "git",
-    "url" : "https://github.com/riccardo-angeli/arianna"
+    "url": "https://github.com/riccardo-angeli/arianna"
   },
   "homepage": "https://arianna.dev",
   "bugs": {
-    "url"  : "https://github.com/riccardo-angeli/arianna/issues",
+    "url": "https://github.com/riccardo-angeli/arianna/issues",
     "email": "bugs@arianna.dev"
   },
   "scripts": {
-    "typecheck"   : "tsc --noEmit",
-    "docs"        : "typedoc --out docs src/index.ts",
-    "prepublish"  : "npm run typecheck",
-    "bench"       : "node ./release/benchmarks/run.js",
-    "build:components": "node scripts/build.mjs",
-    "build:dist"     : "bash scripts/build-dist.sh",
-    "build"          : "npm run build:components && npm run build:dist",
-    "build:min"   : "node scripts/build.mjs --minify"
+    "typecheck": "tsc --noEmit",
+    "docs": "typedoc --out docs src/index.ts",
+    "prepublish": "npm run typecheck && npm run build",
+    "bench": "node ./release/benchmarks/run.js",
+    "build": "node scripts/build.mjs",
+    "build:watch": "node scripts/build.mjs --watch",
+    "build:fast": "node scripts/build.mjs --skip-min",
+    "publish:npm": "npm publish release/dist"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "typedoc"   : "^0.25.0",
-    "husky"     : "^9.0.0"
+    "esbuild": "^0.28.0",
+    "husky": "^9.0.0",
+    "terser": "^5.47.1",
+    "typedoc": "^0.25.0",
+    "typescript": "^5.4.0"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -98,6 +164,6 @@
   ],
   "funding": {
     "type": "commercial",
-    "url" : "https://arianna.dev/licensing"
+    "url": "https://arianna.dev/licensing"
   }
 }
